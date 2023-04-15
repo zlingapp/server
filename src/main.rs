@@ -1,13 +1,16 @@
-use std::{sync::{Arc, Mutex}, collections::HashMap};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
-use actix_web::{web::{self, Data}, HttpServer, App};
+use actix_web::{web::Data, App, HttpServer};
 use channel::Channel;
 use client::Client;
 use mediasoup::worker_manager::WorkerManager;
 
-mod handlers;
-mod client;
 mod channel;
+mod client;
+mod handlers;
 mod options;
 mod util;
 

@@ -1,8 +1,12 @@
-use std::{sync::{Arc, Mutex, RwLock}, ops::Deref, collections::HashMap};
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    sync::{Arc, Mutex, RwLock},
+};
 
-use actix_web::{error::ErrorUnauthorized, FromRequest, web::Data};
+use actix_web::{error::ErrorUnauthorized, web::Data, FromRequest};
 use log::warn;
-use mediasoup::{webrtc_transport::WebRtcTransport, producer::{Producer, ProducerId}, prelude::{Consumer, ConsumerId}, transport::TransportId};
+use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcTransport};
 use nanoid::nanoid;
 
 use crate::{channel::Channel, util::constant_time_compare, Clients, MutexMap};
@@ -13,10 +17,10 @@ pub struct Client {
     pub token: String,
     pub channel: Arc<Channel>,
     // c2s
-    pub c2s_transports: RwLock<HashMap<String, WebRtcTransport>>,
+    pub c2s_transport: RwLock<Option<WebRtcTransport>>,
     pub producers: MutexMap<Producer>,
     // s2c
-    pub s2c_transports: RwLock<HashMap<String, WebRtcTransport>>,
+    pub s2c_transport: RwLock<Option<WebRtcTransport>>,
     pub consumers: MutexMap<Consumer>,
 }
 
@@ -26,9 +30,9 @@ impl Client {
             identity: nanoid!(),
             token: nanoid!(64),
             channel,
-            c2s_transports: RwLock::new(HashMap::new()),
+            c2s_transport: RwLock::new(None),
             producers: Mutex::new(HashMap::new()),
-            s2c_transports: RwLock::new(HashMap::new()),
+            s2c_transport: RwLock::new(None),
             consumers: Mutex::new(HashMap::new()),
         }
     }
@@ -52,7 +56,7 @@ impl FromRequest for ClientEx {
 
     fn from_request(
         req: &actix_web::HttpRequest,
-        payload: &mut actix_web::dev::Payload,
+        _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
         // extract the RTC-Identity header
         let rtc_identity = req
@@ -94,7 +98,10 @@ impl FromRequest for ClientEx {
         let client = client.unwrap();
 
         if !constant_time_compare(&client.token, &rtc_token) {
-            warn!("token mismatch for {:?}: expected {:?}, got {:?}", client.identity, client.token, rtc_token);
+            warn!(
+                "token mismatch for {:?}: expected {:?}, got {:?}",
+                client.identity, client.token, rtc_token
+            );
             return std::future::ready(Err(ErrorUnauthorized("access_denied")));
         }
 

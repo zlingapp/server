@@ -35,7 +35,7 @@ pub async fn create_channel(id: &str, channels: Data<Channels>, wm: Arc<WorkerMa
     debug!("creating channel...");
     let channel = Channel::new_with_id(id.to_owned(), wm).await;
     let channel = Arc::new(channel);
-
+    
     let mut channels = channels.lock().unwrap();
     channels.insert(channel.id.clone(), channel.clone());
 

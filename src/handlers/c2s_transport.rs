@@ -1,5 +1,6 @@
-use actix_web::{get, post, web::Json, ResponseError};
+use actix_web::{get, post, web::Json, ResponseError, http::header::TE};
 use derive_more::{Display, Error};
+use log::{info, error};
 use mediasoup::{
     prelude::{DtlsParameters, IceCandidate, IceParameters},
     transport::Transport,
@@ -20,20 +21,44 @@ pub struct CreateSendTransportReply {
 }
 
 #[derive(Debug, Display, Error)]
-pub struct CreateSendTransportError {}
-impl ResponseError for CreateSendTransportError {}
+// #[display(fmt = "create_failed")]
+pub enum CreateSendTransportError {
+    #[display(fmt = "transport_already_exists")]
+    TransportAlreadyExists,
+    #[display(fmt = "transport_create_failed")]
+    TransportCreateFailed,
+}
+impl ResponseError for CreateSendTransportError {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        use CreateSendTransportError::*;
+        use actix_web::http::StatusCode;
+        match self {
+            TransportAlreadyExists => StatusCode::CONFLICT,
+            TransportCreateFailed => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
 
 pub type CreateSendTransportResponse =
     Result<Json<CreateSendTransportReply>, CreateSendTransportError>;
 
 #[get("/transport/c2s/create")]
 pub async fn create_c2s_transport(client: ClientEx) -> CreateSendTransportResponse {
+    use CreateSendTransportError::*;
+
+    if client.c2s_transport.read().unwrap().is_some() {
+        return Err(TransportAlreadyExists);
+    }
+
     let transport = client
         .channel
         .router
         .create_webrtc_transport(webrtc_transport_options())
         .await
-        .map_err(|_| CreateSendTransportError {})?;
+        .map_err(|e| {
+            error!("client[{}]: c2s transport create failed: {}", client.identity, e);
+            TransportCreateFailed
+        })?;
 
     let reply = CreateSendTransportReply {
         id: transport.id().to_string(),
@@ -42,11 +67,9 @@ pub async fn create_c2s_transport(client: ClientEx) -> CreateSendTransportRespon
         dtls_parameters: transport.dtls_parameters(),
     };
 
-    client
-        .c2s_transports
-        .write()
-        .unwrap()
-        .insert(transport.id().to_string(), transport);
+    info!("client[{}]: c2s transport created, id: {}", client.identity, transport.id());
+
+    *client.c2s_transport.write().unwrap() = Some(transport);
 
     Ok(Json(reply))
 }
@@ -55,11 +78,11 @@ pub async fn create_c2s_transport(client: ClientEx) -> CreateSendTransportRespon
 
 #[derive(Debug, Deserialize)]
 pub struct ConnectSendTransportRequest {
-    transport_id: String,
     dtls_parameters: DtlsParameters,
 }
 
 #[derive(Debug, Display, Error)]
+#[display(fmt = "connect_failed")]
 pub struct ConnectSendTransportError {}
 impl ResponseError for ConnectSendTransportError {}
 
@@ -70,17 +93,23 @@ pub async fn connect_c2s_transport(
     client: ClientEx,
     request: Json<ConnectSendTransportRequest>,
 ) -> ConnectSendTransportResponse {
+    // read lock here is held across an await: problem??? :troll:
     client
-        .c2s_transports
+        .c2s_transport
         .read()
         .unwrap()
-        .get(&request.transport_id)
+        .as_ref()
         .ok_or(ConnectSendTransportError {})?
         .connect(WebRtcTransportRemoteParameters {
             dtls_parameters: request.dtls_parameters.clone(),
         })
         .await
-        .map_err(|_| ConnectSendTransportError {})?;
+        .map_err(|e| {
+            error!("client[{}]: c2s connect failed: {}", client.identity, e);
+            ConnectSendTransportError {}
+        })?;
+
+    info!("client[{}]: c2s transport connected", client.identity);
 
     Ok("connected")
 }

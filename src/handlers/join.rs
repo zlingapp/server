@@ -37,14 +37,10 @@ impl error::ResponseError for JoinVcError {
 pub type JoinVcResponse = Result<Json<JoinVcReply>, JoinVcError>;
 
 #[get("/join")]
-pub async fn join_vc(
-    clients: Data<Clients>,
-    channels: Data<Channels>,
-    wm: Data<WorkerManager>,
-    query: Query<JoinVcQuery>,
-) -> JoinVcResponse {
+pub async fn join_vc(clients: Data<Clients>, channels: Data<Channels>, wm: Data<WorkerManager>, query: Query<JoinVcQuery>) -> JoinVcResponse {
     // get the channel
-    let channel = { channels.lock().unwrap().get(&query.c).cloned() };
+    let channel = channels.lock().unwrap().get(&query.c).cloned();
+    // channels lock is released here
 
     let channel = match channel {
         Some(existing) => existing.clone(),
