@@ -1,13 +1,9 @@
 // implement the produce request
-
-use std::num::NonZeroU16;
-
 use actix_web::error::ResponseError;
 use actix_web::post;
-use actix_web::{get, web::Json};
+use actix_web::web::Json;
 use derive_more::{Display, Error};
 use log::error;
-use mediasoup::prelude::AudioLevelObserverOptions;
 use mediasoup::rtp_observer::{RtpObserver, RtpObserverAddProducerOptions};
 use mediasoup::{
     producer::ProducerOptions,
@@ -91,6 +87,7 @@ pub async fn c2s_produce(client: ClientEx, request: Json<ProduceRequest>) -> Pro
         .unwrap();
 
     let id = producer.id().to_string();
+    let kind = producer.kind();
 
     client
         .producers
@@ -98,7 +95,7 @@ pub async fn c2s_produce(client: ClientEx, request: Json<ProduceRequest>) -> Pro
         .unwrap()
         .insert(id.clone(), producer);
 
-    // TODO: notify other clients about the new producer!
+    client.channel.notify_new_producer(&client, id.clone(), kind).await;
 
     Ok(Json(ProduceReply { id }))
 }

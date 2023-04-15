@@ -3,13 +3,12 @@ use std::{sync::{Arc, Mutex}, num::NonZeroU16};
 use crate::{
     client::Client,
     options::{router_options, worker_settings},
-    Channels,
+    Channels, Clients,
 };
 use actix_web::web::Data;
-use log::{debug, info};
+use log::{debug, info, warn};
 use mediasoup::{router::Router, worker::Worker, worker_manager::WorkerManager, prelude::{AudioLevelObserver, AudioLevelObserverOptions}};
 
-#[derive(Debug)]
 pub struct Channel {
     pub id: String,
     pub clients: Mutex<Vec<Arc<Client>>>,
@@ -47,6 +46,38 @@ impl Channel {
             worker,
             al_observer,
         }
+    }
+
+    pub async fn disconnect_client(&self, client: &Client, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {
+        info!("client {:?} has disconnected", client.identity);
+        
+        self.clients.lock().unwrap().retain(|c| c.identity != client.identity);
+        let removed = global_clients.lock().unwrap().remove(&client.identity);
+        if removed.is_none() {
+            // this should never happen in theory
+            warn!("Client::disconnect_client() called twice for client {:?}", client.identity);
+        }
+
+        if self.clients.lock().unwrap().is_empty() {
+            // at this point the only reference to this channel is the one in the channels map
+            // so we can safely remove it from the map
+            global_channels.lock().unwrap().remove(&self.id);
+        } else {
+            self.notify_client_left(client).await;
+        }
+    }
+
+    pub async fn destroy(&self, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {
+        for client in self.clients.lock().unwrap().iter() {
+            self.disconnect_client(client, global_clients.clone(), global_channels.clone()).await;
+            // on the last iteration, the channel will be removed from the channels map, destroying it
+        }
+    }
+}
+
+impl Drop for Channel {
+    fn drop(&mut self) {
+        info!("dropping channel {:?}", self.id);
     }
 }
 

@@ -4,14 +4,22 @@ use std::{
     sync::{Arc, Mutex, RwLock},
 };
 
-use actix_web::{error::ErrorUnauthorized, web::Data, FromRequest};
-use log::warn;
-use mediasoup::{prelude::{Consumer, AudioLevelObserver}, producer::Producer, webrtc_transport::WebRtcTransport};
+use actix_web::{
+    error::{ErrorBadRequest, ErrorUnauthorized},
+    web::{Data, Query},
+    FromRequest,
+};
+use log::{debug, warn, info};
+use mediasoup::{
+    prelude::{AudioLevelObserver, Consumer},
+    producer::Producer,
+    webrtc_transport::WebRtcTransport,
+};
 use nanoid::nanoid;
+use serde::Deserialize;
 
 use crate::{channel::Channel, util::constant_time_compare, Clients, MutexMap};
 
-#[derive(Debug)]
 pub struct Client {
     pub identity: String,
     pub token: String,
@@ -24,6 +32,8 @@ pub struct Client {
     pub consumers: MutexMap<Consumer>,
 
     pub audio_level_observer: Option<AudioLevelObserver>,
+
+    pub socket_session: RwLock<Option<actix_ws::Session>>,
 }
 
 impl Client {
@@ -37,6 +47,7 @@ impl Client {
             s2c_transport: RwLock::new(None),
             consumers: Mutex::new(HashMap::new()),
             audio_level_observer: None,
+            socket_session: RwLock::new(None),
         }
     }
 }
@@ -61,22 +72,55 @@ impl FromRequest for ClientEx {
         req: &actix_web::HttpRequest,
         _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
-        // extract the RTC-Identity header
-        let rtc_identity = req
-            .headers()
-            .get("RTC-Identity")
-            .and_then(|h| h.to_str().ok())
-            .map(|s| s.to_string());
+        let trying_to_connect_to_ws = req.path() == "/ws" && req.method() == "GET";
 
-        // extract the RTC-Token header
-        let rtc_token = req
-            .headers()
-            .get("RTC-Token")
-            .and_then(|h| h.to_str().ok())
-            .map(|s| s.to_string());
+        let rtc_identity;
+        let rtc_token;
+
+        if trying_to_connect_to_ws {
+            // rtc identity and token are in the query string for ws connections
+            // this is because the RTC-Identity and RTC-Token headers can't be set
+            // because WebSocket() in the browser doesn't allow setting request options! :D
+
+            #[derive(Deserialize)]
+            struct IdAndToken {
+                #[serde(rename = "i")]
+                rtc_identity: String,
+                #[serde(rename = "t")]
+                rtc_token: String,
+            }
+            let query = Query::<IdAndToken>::from_query(req.query_string());
+
+            match query {
+                Ok(q) => {
+                    rtc_identity = Some(q.rtc_identity.clone());
+                    rtc_token = Some(q.rtc_token.clone());
+                }
+                Err(e) => {
+                    return std::future::ready(Err(ErrorUnauthorized("access_denied")));
+                }
+            }
+        } else {
+            // extract the RTC-Identity header
+            rtc_identity = req
+                .headers()
+                .get("RTC-Identity")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string());
+
+            // extract the RTC-Token header
+            rtc_token = req
+                .headers()
+                .get("RTC-Token")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string());
+        }
 
         if rtc_token == None || rtc_identity == None {
-            warn!("no token or identity");
+            warn!(
+                "no token and/or identity provided, denying access to {}",
+                req.uri()
+            );
             return std::future::ready(Err(ErrorUnauthorized("access_denied")));
         }
 
@@ -96,7 +140,8 @@ impl FromRequest for ClientEx {
         if client.is_none() {
             warn!(
                 "unknown identity {:?}, denying access to {}",
-                rtc_identity, req.uri()
+                rtc_identity,
+                req.uri()
             );
             return std::future::ready(Err(ErrorUnauthorized("access_denied")));
         }
@@ -106,9 +151,19 @@ impl FromRequest for ClientEx {
         if !constant_time_compare(&client.token, &rtc_token) {
             warn!(
                 "token mismatch for {:?}, denying access to {}",
-                client.identity, req.uri()
+                client.identity,
+                req.uri()
             );
             return std::future::ready(Err(ErrorUnauthorized("access_denied")));
+        }
+
+        if !trying_to_connect_to_ws && client.socket_session.read().unwrap().is_none() {
+            warn!(
+                "no socket session for {:?}, denying access to {}",
+                client.identity,
+                req.uri()
+            );
+            return std::future::ready(Err(ErrorBadRequest("event_socket_not_connected")));
         }
 
         return std::future::ready(Ok(ClientEx(client)));

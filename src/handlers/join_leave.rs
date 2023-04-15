@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use actix_web::{
     error, get,
-    web::{Data, Json, Query},
+    web::{Data, Json, Query}, HttpResponse, Error,
 };
 use derive_more::{Display, Error};
 
 use mediasoup::{rtp_parameters::RtpCapabilitiesFinalized, worker_manager::WorkerManager};
 use serde::{Deserialize, Serialize};
 
-use crate::{channel::create_channel, client::Client, Channels, Clients};
+use crate::{channel::create_channel, client::{Client, ClientEx}, Channels, Clients};
 
 #[derive(Deserialize)]
 pub struct JoinVcQuery {
@@ -69,4 +69,10 @@ pub async fn join_vc(clients: Data<Clients>, channels: Data<Channels>, wm: Data<
         .insert(client.identity.clone(), client);
 
     Ok(Json(reply))
+}
+
+#[get("/leave")]
+pub async fn leave_vc(client: ClientEx, clients: Data<Clients>, channels: Data<Channels>,) -> Result<HttpResponse, Error> {
+    client.channel.disconnect_client(&client, clients.into_inner(), channels.into_inner()).await;
+    Ok(HttpResponse::Ok().finish())
 }
