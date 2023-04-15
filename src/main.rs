@@ -27,15 +27,21 @@ async fn main() -> std::io::Result<()> {
     let channels: Data<Channels> = Data::new(Mutex::new(HashMap::new()));
 
     HttpServer::new(move || {
+        use handlers::*;
+
+        // add logging middleware
         App::new()
+            .wrap(actix_web::middleware::Logger::default())
             .app_data(worker_manager.clone())
             .app_data(Data::clone(&clients))
             .app_data(Data::clone(&channels))
-            .service(handlers::join_vc)
-            .service(handlers::create_c2s_transport)
+            .service(join_vc)
+            .service(create_c2s_transport)
+            .service(connect_c2s_transport)
+            .service(c2s_produce)
     })
     .workers(2)
-    .bind("127.0.0.1:3000")?
+    .bind("127.0.0.1:8080")?
     .run()
     .await
 }

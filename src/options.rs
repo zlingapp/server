@@ -2,7 +2,7 @@ use std::{num::{NonZeroU32, NonZeroU8}, net::{IpAddr, Ipv4Addr}};
 
 use mediasoup::{rtp_parameters::{
     MimeTypeAudio, MimeTypeVideo, RtcpFeedback, RtpCodecCapability, RtpCodecParametersParameters,
-}, router::RouterOptions, worker::WorkerSettings, webrtc_transport::{WebRtcTransportOptions, TransportListenIps}, prelude::ListenIp};
+}, router::RouterOptions, worker::{WorkerSettings, WorkerLogLevel}, webrtc_transport::{WebRtcTransportOptions, TransportListenIps}, prelude::ListenIp};
 
 pub fn media_codecs() -> Vec<RtpCodecCapability> {
     vec![
@@ -31,7 +31,9 @@ pub fn media_codecs() -> Vec<RtpCodecCapability> {
 }
 
 pub fn worker_settings() -> WorkerSettings {
-    WorkerSettings::default()
+    let mut worker_settings = WorkerSettings::default();
+    worker_settings.log_level = WorkerLogLevel::Warn;
+    worker_settings
 }
 
 pub fn router_options() -> RouterOptions {

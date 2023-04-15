@@ -18,6 +18,7 @@ pub struct JoinVcQuery {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct JoinVcReply {
     channel_id: String,
     identity: String,

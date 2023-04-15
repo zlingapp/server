@@ -6,7 +6,7 @@ use std::{
 
 use actix_web::{error::ErrorUnauthorized, web::Data, FromRequest};
 use log::warn;
-use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcTransport};
+use mediasoup::{prelude::{Consumer, AudioLevelObserver}, producer::Producer, webrtc_transport::WebRtcTransport};
 use nanoid::nanoid;
 
 use crate::{channel::Channel, util::constant_time_compare, Clients, MutexMap};
@@ -22,6 +22,8 @@ pub struct Client {
     // s2c
     pub s2c_transport: RwLock<Option<WebRtcTransport>>,
     pub consumers: MutexMap<Consumer>,
+
+    pub audio_level_observer: Option<AudioLevelObserver>,
 }
 
 impl Client {
@@ -34,6 +36,7 @@ impl Client {
             producers: Mutex::new(HashMap::new()),
             s2c_transport: RwLock::new(None),
             consumers: Mutex::new(HashMap::new()),
+            audio_level_observer: None,
         }
     }
 }
@@ -91,7 +94,10 @@ impl FromRequest for ClientEx {
             .cloned();
 
         if client.is_none() {
-            warn!("unknown identity: {}", rtc_identity);
+            warn!(
+                "unknown identity {:?}, denying access to {}",
+                rtc_identity, req.uri()
+            );
             return std::future::ready(Err(ErrorUnauthorized("access_denied")));
         }
 
@@ -99,8 +105,8 @@ impl FromRequest for ClientEx {
 
         if !constant_time_compare(&client.token, &rtc_token) {
             warn!(
-                "token mismatch for {:?}: expected {:?}, got {:?}",
-                client.identity, client.token, rtc_token
+                "token mismatch for {:?}, denying access to {}",
+                client.identity, req.uri()
             );
             return std::future::ready(Err(ErrorUnauthorized("access_denied")));
         }

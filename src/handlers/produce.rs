@@ -1,9 +1,14 @@
 // implement the produce request
 
+use std::num::NonZeroU16;
+
 use actix_web::error::ResponseError;
+use actix_web::post;
 use actix_web::{get, web::Json};
 use derive_more::{Display, Error};
 use log::error;
+use mediasoup::prelude::AudioLevelObserverOptions;
+use mediasoup::rtp_observer::{RtpObserver, RtpObserverAddProducerOptions};
 use mediasoup::{
     producer::ProducerOptions,
     rtp_parameters::{MediaKind, RtpParameters},
@@ -14,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::client::ClientEx;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProduceRequest {
     pub kind: MediaKind,
     pub rtp_parameters: RtpParameters,
@@ -42,14 +48,15 @@ impl ResponseError for ProduceError {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProduceReply {
     pub id: String,
 }
 
 pub type ProduceResponse = Result<Json<ProduceReply>, ProduceError>;
 
-#[get("/produce")]
-async fn c2s_produce(client: ClientEx, request: Json<ProduceRequest>) -> ProduceResponse {
+#[post("/produce")]
+pub async fn c2s_produce(client: ClientEx, request: Json<ProduceRequest>) -> ProduceResponse {
     if client.c2s_transport.read().unwrap().is_none() {
         return Err(ProduceError::TransportNotCreated);
     }
@@ -75,6 +82,13 @@ async fn c2s_produce(client: ClientEx, request: Json<ProduceRequest>) -> Produce
                 ProduceError::ProducerFailed
             })?
     };
+
+    client
+        .channel
+        .al_observer
+        .add_producer(RtpObserverAddProducerOptions::new(producer.id()))
+        .await
+        .unwrap();
 
     let id = producer.id().to_string();
 

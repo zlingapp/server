@@ -1,6 +1,6 @@
 use actix_web::{get, post, web::Json, ResponseError};
 use derive_more::{Display, Error};
-use log::{info, error};
+use log::{info, error, warn};
 use mediasoup::{
     prelude::{DtlsParameters, IceCandidate, IceParameters},
     transport::Transport,
@@ -13,6 +13,7 @@ use crate::{client::ClientEx, options::webrtc_transport_options};
 // -------------- CREATE C2S TRANSPORT --------------
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateSendTransportReply {
     id: String,
     ice_parameters: IceParameters,
@@ -47,6 +48,7 @@ pub async fn create_c2s_transport(client: ClientEx) -> CreateSendTransportRespon
     use CreateSendTransportError::*;
 
     if client.c2s_transport.read().unwrap().is_some() {
+        warn!("client[{}]: tried to create c2s transport when it already exists", client.identity);
         return Err(TransportAlreadyExists);
     }
 
@@ -77,6 +79,7 @@ pub async fn create_c2s_transport(client: ClientEx) -> CreateSendTransportRespon
 // -------------- CONNECT C2S TRANSPORT --------------
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConnectSendTransportRequest {
     dtls_parameters: DtlsParameters,
 }
