@@ -1,7 +1,7 @@
 // implement the produce request
 
 use actix_web::error::ResponseError;
-use actix_web::{get, web::Json, Responder};
+use actix_web::{get, web::Json};
 use derive_more::{Display, Error};
 use log::error;
 use mediasoup::{
@@ -55,7 +55,7 @@ async fn c2s_produce(client: ClientEx, request: Json<ProduceRequest>) -> Produce
     }
 
     let producer;
-    
+
     {
         let transport = client.c2s_transport.read().unwrap();
         let transport = transport.as_ref().unwrap(); // this is a safe unwrap because of the check above
