@@ -48,23 +48,25 @@ impl Channel {
         }
     }
 
-    pub async fn disconnect_client(&self, client: &Client, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {
-        info!("client {:?} has disconnected", client.identity);
-        
-        self.clients.lock().unwrap().retain(|c| c.identity != client.identity);
-        let removed = global_clients.lock().unwrap().remove(&client.identity);
+    pub async fn erase_client(&self, client_identity: &str, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {
+        info!("client {:?} has disconnected", client_identity);
+        self.clients.lock().unwrap().retain(|c| c.identity != client_identity);
+        let removed = global_clients.lock().unwrap().remove(client_identity);
         if removed.is_none() {
             // this should never happen in theory
-            warn!("Client::disconnect_client() called twice for client {:?}", client.identity);
+            warn!("Channel::erase_client() called twice for client {:?}", client_identity);
         }
-
+        
         if self.clients.lock().unwrap().is_empty() {
             // at this point the only reference to this channel is the one in the channels map
             // so we can safely remove it from the map
             global_channels.lock().unwrap().remove(&self.id);
-        } else {
-            self.notify_client_left(client).await;
         }
+    }
+
+    pub async fn disconnect_client(&self, client: &Client, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {
+        self.erase_client(&client.identity, global_clients, global_channels).await;
+        self.notify_client_left(client).await;
     }
 
     pub async fn destroy(&self, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {

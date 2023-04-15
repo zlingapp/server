@@ -1,3 +1,4 @@
+use actix_rt::task::JoinHandle;
 use actix_web::{
     get,
     web::{Data, Payload},
@@ -35,6 +36,13 @@ pub async fn events_ws(
 
         // notify channel
         client.channel.notify_client_joined(&client).await;
+        
+        // this check should never fail, but just in case...
+        if let Some(watchdog) = client.socket_watchdog_handle.lock().unwrap().take() {
+            // we connected successfully, so stop the watchdog now
+            watchdog.abort();
+        }
+        *client.socket_watchdog_handle.lock().unwrap() = None;
 
         while let Some(Ok(msg)) = msg_stream.next().await {
             match msg {

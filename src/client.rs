@@ -1,15 +1,16 @@
 use std::{
     collections::HashMap,
     ops::Deref,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, Mutex, RwLock}, cell::Cell,
 };
 
+use actix_rt::task::JoinHandle;
 use actix_web::{
     error::{ErrorBadRequest, ErrorUnauthorized},
     web::{Data, Query},
     FromRequest,
 };
-use log::{debug, warn, info};
+use log::warn;
 use mediasoup::{
     prelude::{AudioLevelObserver, Consumer},
     producer::Producer,
@@ -31,9 +32,8 @@ pub struct Client {
     pub s2c_transport: RwLock<Option<WebRtcTransport>>,
     pub consumers: MutexMap<Consumer>,
 
-    pub audio_level_observer: Option<AudioLevelObserver>,
-
     pub socket_session: RwLock<Option<actix_ws::Session>>,
+    pub socket_watchdog_handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl Client {
@@ -46,8 +46,8 @@ impl Client {
             producers: Mutex::new(HashMap::new()),
             s2c_transport: RwLock::new(None),
             consumers: Mutex::new(HashMap::new()),
-            audio_level_observer: None,
             socket_session: RwLock::new(None),
+            socket_watchdog_handle: Mutex::new(None),
         }
     }
 }
@@ -96,7 +96,7 @@ impl FromRequest for ClientEx {
                     rtc_identity = Some(q.rtc_identity.clone());
                     rtc_token = Some(q.rtc_token.clone());
                 }
-                Err(e) => {
+                Err(_) => {
                     return std::future::ready(Err(ErrorUnauthorized("access_denied")));
                 }
             }
