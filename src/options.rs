@@ -1,8 +1,19 @@
-use std::{num::{NonZeroU32, NonZeroU8}, net::{IpAddr, Ipv4Addr}};
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    num::{NonZeroU32, NonZeroU8},
+};
 
-use mediasoup::{rtp_parameters::{
-    MimeTypeAudio, MimeTypeVideo, RtcpFeedback, RtpCodecCapability, RtpCodecParametersParameters,
-}, router::RouterOptions, worker::{WorkerSettings, WorkerLogLevel}, webrtc_transport::{WebRtcTransportOptions, TransportListenIps}, prelude::ListenIp};
+use log::info;
+use mediasoup::{
+    prelude::ListenIp,
+    router::RouterOptions,
+    rtp_parameters::{
+        MimeTypeAudio, MimeTypeVideo, RtcpFeedback, RtpCodecCapability,
+        RtpCodecParametersParameters,
+    },
+    webrtc_transport::{TransportListenIps, WebRtcTransportOptions},
+    worker::{WorkerLogLevel, WorkerSettings},
+};
 
 pub fn media_codecs() -> Vec<RtpCodecCapability> {
     vec![
@@ -33,6 +44,7 @@ pub fn media_codecs() -> Vec<RtpCodecCapability> {
 pub fn worker_settings() -> WorkerSettings {
     let mut worker_settings = WorkerSettings::default();
     worker_settings.log_level = WorkerLogLevel::Warn;
+    worker_settings.rtc_ports_range=10000..=10010;
     worker_settings
 }
 
@@ -41,14 +53,18 @@ pub fn router_options() -> RouterOptions {
 }
 
 pub fn webrtc_transport_options() -> WebRtcTransportOptions {
-    let mut opts = WebRtcTransportOptions::new(
-        TransportListenIps::new(
-            ListenIp {
-                ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-                announced_ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
-            }
-        )
-    );
+    // get environment variable for announce ip
+    let announce_ip = std::env::var("PUBLIC_IP")
+        .unwrap_or_else(|_| "127.0.0.1".to_owned())
+        .parse()
+        .unwrap();
+
+    // info!("RTC announce IP: {}", announce_ip);
+
+    let mut opts = WebRtcTransportOptions::new(TransportListenIps::new(ListenIp {
+        ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+        announced_ip: Some(IpAddr::V4(announce_ip)),
+    }));
 
     opts.enable_udp = true;
     opts.enable_tcp = true;

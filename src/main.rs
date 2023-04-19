@@ -31,7 +31,7 @@ async fn main() -> std::io::Result<()> {
 
         // add logging middleware
         App::new()
-            .wrap(actix_web::middleware::Logger::default())
+            // .wrap(actix_web::middleware::Logger::default())
             .app_data(worker_manager.clone())
             .app_data(Data::clone(&clients))
             .app_data(Data::clone(&channels))
@@ -39,9 +39,10 @@ async fn main() -> std::io::Result<()> {
             .service(join_vc)
             .service(leave_vc)
             .service(events_ws)
-            .service(create_c2s_transport)
-            .service(connect_c2s_transport)
-            .service(c2s_produce)
+            .service(create_transport)
+            .service(connect_transport)
+            .service(handle_produce)
+            .service(handle_consume)
     })
     .workers(2)
     .bind("127.0.0.1:8080")?

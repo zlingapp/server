@@ -8,7 +8,7 @@ use actix_web::{
 };
 use derive_more::{Display, Error};
 
-use log::warn;
+use log::{info, warn};
 use mediasoup::{rtp_parameters::RtpCapabilitiesFinalized, worker_manager::WorkerManager};
 use serde::{Deserialize, Serialize};
 
@@ -90,7 +90,10 @@ pub async fn join_vc(
 
             // if the client hasn't connected to the websocket yet, remove it from the channel
             if client_inner.socket_session.read().unwrap().is_none() {
-                warn!("Client {} didn't connect to the websocket in time, removing it from the channel", client_inner.identity);
+                warn!(
+                    "client[{:?}]: watchdog: didn't connect to the websocket in time, removing",
+                    client_inner.identity
+                );
                 client_inner
                     .channel
                     .erase_client(
@@ -99,11 +102,40 @@ pub async fn join_vc(
                         channels.into_inner(),
                     )
                     .await;
+                return;
+            }
+
+            loop {
+                sleep(Duration::from_secs(10)).await;
+
+                // if the client hasn't sent a heartbeat in 10 seconds, remove it from the channel
+                let last_ping = client_inner.last_ping.read().unwrap();
+
+                if last_ping.is_none() || last_ping.unwrap().elapsed().as_secs() > 10 {
+                    warn!(
+                        "client[{:?}]: watchdog: didn't send a heartbeat in time, removing",
+                        client_inner.identity
+                    );
+                    client_inner
+                        .channel
+                        .disconnect_client(
+                            &client_inner,
+                            clients_inner.into_inner(),
+                            channels.into_inner(),
+                        )
+                        .await;
+                    return;
+                }
             }
         }));
 
         *client_outer.socket_watchdog_handle.lock().unwrap() = handle;
     }
+
+    info!(
+        "client[{:?}]: joined channel {:?}",
+        client.identity, channel.id
+    );
 
     // add the client to the global client list
     clients

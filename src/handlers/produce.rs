@@ -22,12 +22,10 @@ pub struct ProduceRequest {
 }
 
 #[derive(Debug, Display, Error)]
+#[display(rename_all = "snake_case")]
 pub enum ProduceError {
-    #[display(fmt = "transport_not_created")]
     TransportNotCreated,
-    #[display(fmt = "transport_not_connected")]
     TransportNotConnected,
-    #[display(fmt = "producer_failed")]
     ProducerFailed,
 }
 
@@ -52,7 +50,7 @@ pub struct ProduceReply {
 pub type ProduceResponse = Result<Json<ProduceReply>, ProduceError>;
 
 #[post("/produce")]
-pub async fn c2s_produce(client: ClientEx, request: Json<ProduceRequest>) -> ProduceResponse {
+pub async fn handle_produce(client: ClientEx, request: Json<ProduceRequest>) -> ProduceResponse {
     if client.c2s_transport.read().unwrap().is_none() {
         return Err(ProduceError::TransportNotCreated);
     }
@@ -74,7 +72,7 @@ pub async fn c2s_produce(client: ClientEx, request: Json<ProduceRequest>) -> Pro
             ))
             .await
             .map_err(|e| {
-                error!("client[{}]: produce() failed: {}", client.identity, e);
+                error!("client[{:?}]: produce() failed: {}", client.identity, e);
                 ProduceError::ProducerFailed
             })?
     };

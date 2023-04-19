@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     ops::Deref,
-    sync::{Arc, Mutex, RwLock}, cell::Cell,
+    sync::{Arc, Mutex, RwLock},
 };
 
 use actix_rt::task::JoinHandle;
@@ -11,11 +11,7 @@ use actix_web::{
     FromRequest,
 };
 use log::warn;
-use mediasoup::{
-    prelude::{AudioLevelObserver, Consumer},
-    producer::Producer,
-    webrtc_transport::WebRtcTransport,
-};
+use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcTransport};
 use nanoid::nanoid;
 use serde::Deserialize;
 
@@ -34,6 +30,8 @@ pub struct Client {
 
     pub socket_session: RwLock<Option<actix_ws::Session>>,
     pub socket_watchdog_handle: Mutex<Option<JoinHandle<()>>>,
+
+    pub last_ping: RwLock<Option<std::time::Instant>>,
 }
 
 impl Client {
@@ -48,6 +46,18 @@ impl Client {
             consumers: Mutex::new(HashMap::new()),
             socket_session: RwLock::new(None),
             socket_watchdog_handle: Mutex::new(None),
+            last_ping: RwLock::new(None),
+        }
+    }
+
+    pub async fn cleanup(&self) {
+        if let Some(watchdog) = self.socket_watchdog_handle.lock().unwrap().take() {
+            // we connected successfully, so stop the watchdog now
+            watchdog.abort();
+        }
+        if let Some(session) = self.socket_session.write().unwrap().take() {
+            // we connected successfully, so close the session now
+            session.close(None).await;
         }
     }
 }
@@ -119,7 +129,7 @@ impl FromRequest for ClientEx {
         if rtc_token == None || rtc_identity == None {
             warn!(
                 "no token and/or identity provided, denying access to {}",
-                req.uri()
+                req.path()
             );
             return std::future::ready(Err(ErrorUnauthorized("access_denied")));
         }
@@ -141,7 +151,7 @@ impl FromRequest for ClientEx {
             warn!(
                 "unknown identity {:?}, denying access to {}",
                 rtc_identity,
-                req.uri()
+                req.path()
             );
             return std::future::ready(Err(ErrorUnauthorized("access_denied")));
         }
@@ -152,7 +162,7 @@ impl FromRequest for ClientEx {
             warn!(
                 "token mismatch for {:?}, denying access to {}",
                 client.identity,
-                req.uri()
+                req.path()
             );
             return std::future::ready(Err(ErrorUnauthorized("access_denied")));
         }
@@ -161,7 +171,7 @@ impl FromRequest for ClientEx {
             warn!(
                 "no socket session for {:?}, denying access to {}",
                 client.identity,
-                req.uri()
+                req.path()
             );
             return std::future::ready(Err(ErrorBadRequest("event_socket_not_connected")));
         }

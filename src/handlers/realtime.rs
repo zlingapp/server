@@ -1,4 +1,3 @@
-use actix_rt::task::JoinHandle;
 use actix_web::{
     get,
     web::{Data, Payload},
@@ -6,14 +5,14 @@ use actix_web::{
 };
 use actix_ws::{Closed, Message};
 use futures::StreamExt;
-use log::error;
+use log::{error, info};
 use mediasoup::rtp_parameters::MediaKind;
 use serde_json::json;
 
 use crate::{
     channel::Channel,
     client::{Client, ClientEx},
-    Clients, Channels,
+    Channels, Clients,
 };
 
 #[get("/ws")] // WARNING: before changing this path, make sure to change it in the client extractor!!!
@@ -29,20 +28,30 @@ pub async fn events_ws(
     *client.socket_session.write().unwrap() = Some(session.clone());
 
     actix_rt::spawn(async move {
-        session
-            .text(json!({ "type": "connected" }).to_string())
-            .await
-            .unwrap();
-
         // notify channel
         client.channel.notify_client_joined(&client).await;
-        
-        // this check should never fail, but just in case...
-        if let Some(watchdog) = client.socket_watchdog_handle.lock().unwrap().take() {
-            // we connected successfully, so stop the watchdog now
-            watchdog.abort();
-        }
-        *client.socket_watchdog_handle.lock().unwrap() = None;
+
+        info!(
+            "client[{:?}]: connected to event socket: {:?}",
+            client.identity, client.channel.id
+        );
+
+        // notify client of existing producers
+        // for other_client in client.channel.clients.lock().unwrap().iter() {
+        //     for producer in other_client.producers.lock().unwrap().values() {
+        //         let msg = json!({
+        //             "type": "new_producer",
+        //             "identity": other_client.identity,
+        //             "producer_id": producer.id(),
+        //             "producer_kind": producer.kind(),
+        //         });
+
+        //         let client_ = client.clone();
+        //         actix_rt::spawn(async move {
+        //             client_.send(msg.to_string()).await.unwrap();
+        //         });
+        //     }
+        // }
 
         while let Some(Ok(msg)) = msg_stream.next().await {
             match msg {
@@ -87,7 +96,15 @@ pub async fn events_ws(
 
 impl Client {
     pub async fn on_message_from_client(&self, msg: String) {
-        println!("Received message from client {}: {:?}", self.identity, msg);
+        if msg == "heartbeat" {
+            *self.last_ping.write().unwrap() = Some(std::time::Instant::now());
+            return;
+        }
+
+        info!(
+            "client[{:?}]: received message on event socket: {:?}",
+            self.identity, msg
+        );
     }
 
     pub async fn send(&self, msg: String) -> Result<(), Closed> {
@@ -109,7 +126,10 @@ impl Channel {
 
             if client.send(msg.clone()).await.is_err() {
                 // this shouldn't happen
-                error!("tried to send to disconnected client: {}", client.identity);
+                error!(
+                    "tried to send to disconnected client: {:?}",
+                    client.identity
+                );
             };
         }
     }
@@ -146,6 +166,17 @@ impl Channel {
             "identity": client.identity,
             "producer_id": producer_id,
             "producer_kind": producer_kind,
+        });
+
+        self.send_to_all_except(&client, event.to_string()).await;
+    }
+
+    pub async fn notify_producer_closed(&self, client: &Client, producer_id: String) {
+        // serialize the message
+        let event = json!({
+            "type": "producer_closed",
+            "identity": client.identity,
+            "producer_id": producer_id,
         });
 
         self.send_to_all_except(&client, event.to_string()).await;

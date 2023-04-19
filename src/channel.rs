@@ -1,4 +1,7 @@
-use std::{sync::{Arc, Mutex}, num::NonZeroU16};
+use std::{
+    num::NonZeroU16,
+    sync::{Arc, Mutex},
+};
 
 use crate::{
     client::Client,
@@ -6,8 +9,13 @@ use crate::{
     Channels, Clients,
 };
 use actix_web::web::Data;
-use log::{debug, info, warn};
-use mediasoup::{router::Router, worker::Worker, worker_manager::WorkerManager, prelude::{AudioLevelObserver, AudioLevelObserverOptions}};
+use log::{info, warn};
+use mediasoup::{
+    prelude::{AudioLevelObserver, AudioLevelObserverOptions},
+    router::Router,
+    worker::Worker,
+    worker_manager::WorkerManager,
+};
 
 pub struct Channel {
     pub id: String,
@@ -33,11 +41,11 @@ impl Channel {
             .await
             .unwrap();
 
-        al_observer.on_volumes(|volumes| {
-            for volume in volumes {
-                info!("Volume of {}: {} dB", volume.producer.id(), volume.volume);
-            }
-        }).detach();
+        // al_observer.on_volumes(|volumes| {
+        //     for volume in volumes {
+        //         info!("Volume of {}: {} dB", volume.producer.id(), volume.volume);
+        //     }
+        // }).detach();
 
         Self {
             id: id.to_owned(),
@@ -48,30 +56,61 @@ impl Channel {
         }
     }
 
-    pub async fn erase_client(&self, client_identity: &str, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {
-        info!("client {:?} has disconnected", client_identity);
-        self.clients.lock().unwrap().retain(|c| c.identity != client_identity);
+    pub async fn erase_client(
+        &self,
+        client_identity: &str,
+        global_clients: Arc<Clients>,
+        global_channels: Arc<Channels>,
+    ) {
+        
+        // remove the client from the channel
+        self.clients
+            .lock()
+            .unwrap()
+            .retain(|c| c.identity != client_identity);
+
+        // remove the client from the global clients map
         let removed = global_clients.lock().unwrap().remove(client_identity);
         if removed.is_none() {
             // this should never happen in theory
-            warn!("Channel::erase_client() called twice for client {:?}", client_identity);
+            warn!(
+                "client[{:?}]: Channel::erase_client() called twice",
+                client_identity
+            );
+        } else {
+            removed.unwrap().cleanup().await;
         }
-        
+
+        // if the channel is empty, remove it from the global channels map
         if self.clients.lock().unwrap().is_empty() {
             // at this point the only reference to this channel is the one in the channels map
             // so we can safely remove it from the map
             global_channels.lock().unwrap().remove(&self.id);
         }
+
+        info!(
+            "client[{:?}]: disconnected from {:?}, remaining: {}",
+            client_identity,
+            self.id,
+            self.clients.lock().unwrap().len()
+        );
     }
 
-    pub async fn disconnect_client(&self, client: &Client, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {
-        self.erase_client(&client.identity, global_clients, global_channels).await;
+    pub async fn disconnect_client(
+        &self,
+        client: &Client,
+        global_clients: Arc<Clients>,
+        global_channels: Arc<Channels>,
+    ) {
+        self.erase_client(&client.identity, global_clients, global_channels)
+            .await;
         self.notify_client_left(client).await;
     }
 
     pub async fn destroy(&self, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {
         for client in self.clients.lock().unwrap().iter() {
-            self.disconnect_client(client, global_clients.clone(), global_channels.clone()).await;
+            self.disconnect_client(client, global_clients.clone(), global_channels.clone())
+                .await;
             // on the last iteration, the channel will be removed from the channels map, destroying it
         }
     }
@@ -79,7 +118,7 @@ impl Channel {
 
 impl Drop for Channel {
     fn drop(&mut self) {
-        info!("dropping channel {:?}", self.id);
+        info!("channel[{:?}]: dropped", self.id);
     }
 }
 
@@ -88,12 +127,13 @@ pub async fn create_channel(
     channels: Data<Channels>,
     wm: Arc<WorkerManager>,
 ) -> Arc<Channel> {
-    debug!("creating channel...");
     let channel = Channel::new_with_id(id.to_owned(), wm).await;
     let channel = Arc::new(channel);
 
     let mut channels = channels.lock().unwrap();
     channels.insert(channel.id.clone(), channel.clone());
+
+    info!("channel[{:?}]: created", channel.id);
 
     return channel;
 }
