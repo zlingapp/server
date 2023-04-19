@@ -9,20 +9,24 @@ use log::{error, info};
 use mediasoup::rtp_parameters::MediaKind;
 use serde_json::json;
 
-use crate::{
-    channel::Channel,
-    client::{Client, ClientEx},
-    Channels, Clients,
+use crate::voice::{
+    channel::VoiceChannel,
+    client::{VoiceClient, VoiceClientEx},
+    VoiceChannels, VoiceClients,
 };
 
 #[get("/ws")] // WARNING: before changing this path, make sure to change it in the client extractor!!!
 pub async fn events_ws(
-    client: ClientEx,
-    clients: Data<Clients>,
-    channels: Data<Channels>,
+    client: VoiceClientEx,
+    clients: Data<VoiceClients>,
+    channels: Data<VoiceChannels>,
     req: HttpRequest,
     body: Payload,
 ) -> Result<HttpResponse, Error> {
+    if client.socket_session.read().unwrap().is_some() {
+        return Err(actix_web::error::ErrorBadRequest("already_connected"));
+    }
+
     let (response, mut session, mut msg_stream) = actix_ws::handle(&req, body)?;
 
     *client.socket_session.write().unwrap() = Some(session.clone());
@@ -94,7 +98,7 @@ pub async fn events_ws(
     Ok(response)
 }
 
-impl Client {
+impl VoiceClient {
     pub async fn on_message_from_client(&self, msg: String) {
         if msg == "heartbeat" {
             *self.last_ping.write().unwrap() = Some(std::time::Instant::now());
@@ -116,8 +120,8 @@ impl Client {
     }
 }
 
-impl Channel {
-    pub async fn send_to_all_except(&self, except: &Client, msg: String) {
+impl VoiceChannel {
+    pub async fn send_to_all_except(&self, except: &VoiceClient, msg: String) {
         let clients = self.clients.lock().unwrap();
         for client in clients.iter() {
             if client.identity == except.identity {
@@ -134,7 +138,7 @@ impl Channel {
         }
     }
 
-    pub async fn notify_client_joined(&self, client: &Client) {
+    pub async fn notify_client_joined(&self, client: &VoiceClient) {
         // serialize the message
         let event = json!({
             "type": "client_connected",
@@ -144,7 +148,7 @@ impl Channel {
         self.send_to_all_except(&client, event.to_string()).await;
     }
 
-    pub async fn notify_client_left(&self, client: &Client) {
+    pub async fn notify_client_left(&self, client: &VoiceClient) {
         // serialize the message
         let event = json!({
             "type": "client_disconnected",
@@ -156,7 +160,7 @@ impl Channel {
 
     pub async fn notify_new_producer(
         &self,
-        client: &Client,
+        client: &VoiceClient,
         producer_id: String,
         producer_kind: MediaKind,
     ) {
@@ -171,7 +175,7 @@ impl Channel {
         self.send_to_all_except(&client, event.to_string()).await;
     }
 
-    pub async fn notify_producer_closed(&self, client: &Client, producer_id: String) {
+    pub async fn notify_producer_closed(&self, client: &VoiceClient, producer_id: String) {
         // serialize the message
         let event = json!({
             "type": "producer_closed",

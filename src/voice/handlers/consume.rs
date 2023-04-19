@@ -8,7 +8,7 @@ use mediasoup::rtp_parameters::{RtpCapabilities, RtpParameters, MediaKind};
 use mediasoup::{producer::ProducerId, transport::Transport};
 use serde::{Deserialize, Serialize};
 
-use crate::client::ClientEx;
+use crate::voice::client::VoiceClientEx;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,7 +51,7 @@ pub struct ConsumeReply {
 pub type ConsumeResponse = Result<Json<ConsumeReply>, ConsumeError>;
 
 #[post("/consume")]
-pub async fn handle_consume(client: ClientEx, request: Json<ConsumeRequest>) -> ConsumeResponse {
+pub async fn handle_consume(client: VoiceClientEx, request: Json<ConsumeRequest>) -> ConsumeResponse {
     use ConsumeError::*;
 
     if client.s2c_transport.read().unwrap().is_none() {

@@ -15,12 +15,13 @@ use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcT
 use nanoid::nanoid;
 use serde::Deserialize;
 
-use crate::{channel::Channel, util::constant_time_compare, Clients, MutexMap};
+use crate::voice::{channel::VoiceChannel, VoiceClients, MutexMap};
+use crate::util::constant_time_compare;
 
-pub struct Client {
+pub struct VoiceClient {
     pub identity: String,
     pub token: String,
-    pub channel: Arc<Channel>,
+    pub channel: Arc<VoiceChannel>,
     // c2s
     pub c2s_transport: RwLock<Option<WebRtcTransport>>,
     pub producers: MutexMap<Producer>,
@@ -34,8 +35,8 @@ pub struct Client {
     pub last_ping: RwLock<Option<std::time::Instant>>,
 }
 
-impl Client {
-    pub fn new_random(channel: Arc<Channel>) -> Self {
+impl VoiceClient {
+    pub fn new_random(channel: Arc<VoiceChannel>) -> Self {
         Self {
             identity: nanoid!(),
             token: nanoid!(64),
@@ -50,6 +51,7 @@ impl Client {
         }
     }
 
+    #[allow(unused_must_use)] // don't care about unused results
     pub async fn cleanup(&self) {
         if let Some(watchdog) = self.socket_watchdog_handle.lock().unwrap().take() {
             // we connected successfully, so stop the watchdog now
@@ -63,17 +65,17 @@ impl Client {
 }
 
 // extract the client from the request
-pub struct ClientEx(pub Arc<Client>);
+pub struct VoiceClientEx(pub Arc<VoiceClient>);
 
-impl Deref for ClientEx {
-    type Target = Arc<Client>;
+impl Deref for VoiceClientEx {
+    type Target = Arc<VoiceClient>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl FromRequest for ClientEx {
+impl FromRequest for VoiceClientEx {
     type Error = actix_web::Error;
 
     type Future = std::future::Ready<Result<Self, Self::Error>>;
@@ -82,7 +84,7 @@ impl FromRequest for ClientEx {
         req: &actix_web::HttpRequest,
         _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
-        let trying_to_connect_to_ws = req.path() == "/ws" && req.method() == "GET";
+        let trying_to_connect_to_ws = req.path() == "/voice/ws" && req.method() == "GET";
 
         let rtc_identity;
         let rtc_token;
@@ -140,7 +142,7 @@ impl FromRequest for ClientEx {
 
         // get the client with that identity
         let client = req
-            .app_data::<Data<Clients>>()
+            .app_data::<Data<VoiceClients>>()
             .unwrap()
             .lock()
             .unwrap()
@@ -176,6 +178,6 @@ impl FromRequest for ClientEx {
             return std::future::ready(Err(ErrorBadRequest("event_socket_not_connected")));
         }
 
-        return std::future::ready(Ok(ClientEx(client)));
+        return std::future::ready(Ok(VoiceClientEx(client)));
     }
 }

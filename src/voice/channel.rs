@@ -3,10 +3,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{
-    client::Client,
+use crate::voice::{
+    client::VoiceClient,
     options::{router_options, worker_settings},
-    Channels, Clients,
+    VoiceChannels, VoiceClients,
 };
 use actix_web::web::Data;
 use log::{info, warn};
@@ -17,15 +17,15 @@ use mediasoup::{
     worker_manager::WorkerManager,
 };
 
-pub struct Channel {
+pub struct VoiceChannel {
     pub id: String,
-    pub clients: Mutex<Vec<Arc<Client>>>,
+    pub clients: Mutex<Vec<Arc<VoiceClient>>>,
     pub router: Router,
     pub worker: Worker,
     pub al_observer: AudioLevelObserver,
 }
 
-impl Channel {
+impl VoiceChannel {
     pub async fn new_with_id(id: String, wm: Arc<WorkerManager>) -> Self {
         let worker = wm.create_worker(worker_settings()).await.unwrap();
         let router = worker.create_router(router_options()).await.unwrap();
@@ -59,8 +59,8 @@ impl Channel {
     pub async fn erase_client(
         &self,
         client_identity: &str,
-        global_clients: Arc<Clients>,
-        global_channels: Arc<Channels>,
+        global_clients: Arc<VoiceClients>,
+        global_channels: Arc<VoiceChannels>,
     ) {
         
         // remove the client from the channel
@@ -98,16 +98,16 @@ impl Channel {
 
     pub async fn disconnect_client(
         &self,
-        client: &Client,
-        global_clients: Arc<Clients>,
-        global_channels: Arc<Channels>,
+        client: &VoiceClient,
+        global_clients: Arc<VoiceClients>,
+        global_channels: Arc<VoiceChannels>,
     ) {
         self.erase_client(&client.identity, global_clients, global_channels)
             .await;
         self.notify_client_left(client).await;
     }
 
-    pub async fn destroy(&self, global_clients: Arc<Clients>, global_channels: Arc<Channels>) {
+    pub async fn destroy(&self, global_clients: Arc<VoiceClients>, global_channels: Arc<VoiceChannels>) {
         for client in self.clients.lock().unwrap().iter() {
             self.disconnect_client(client, global_clients.clone(), global_channels.clone())
                 .await;
@@ -116,7 +116,7 @@ impl Channel {
     }
 }
 
-impl Drop for Channel {
+impl Drop for VoiceChannel {
     fn drop(&mut self) {
         info!("channel[{:?}]: dropped", self.id);
     }
@@ -124,10 +124,10 @@ impl Drop for Channel {
 
 pub async fn create_channel(
     id: &str,
-    channels: Data<Channels>,
+    channels: Data<VoiceChannels>,
     wm: Arc<WorkerManager>,
-) -> Arc<Channel> {
-    let channel = Channel::new_with_id(id.to_owned(), wm).await;
+) -> Arc<VoiceChannel> {
+    let channel = VoiceChannel::new_with_id(id.to_owned(), wm).await;
     let channel = Arc::new(channel);
 
     let mut channels = channels.lock().unwrap();

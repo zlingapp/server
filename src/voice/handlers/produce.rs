@@ -12,7 +12,7 @@ use mediasoup::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::client::ClientEx;
+use crate::voice::client::VoiceClientEx;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -50,7 +50,7 @@ pub struct ProduceReply {
 pub type ProduceResponse = Result<Json<ProduceReply>, ProduceError>;
 
 #[post("/produce")]
-pub async fn handle_produce(client: ClientEx, request: Json<ProduceRequest>) -> ProduceResponse {
+pub async fn handle_produce(client: VoiceClientEx, request: Json<ProduceRequest>) -> ProduceResponse {
     if client.c2s_transport.read().unwrap().is_none() {
         return Err(ProduceError::TransportNotCreated);
     }

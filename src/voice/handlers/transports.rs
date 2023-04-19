@@ -12,7 +12,7 @@ use mediasoup::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{client::ClientEx, options::webrtc_transport_options};
+use crate::voice::{client::VoiceClientEx, options::webrtc_transport_options};
 
 /*
    There are two handlers registered below for transports.
@@ -81,7 +81,7 @@ pub type CreateTransportResponse = Result<Json<CreateTransportReply>, CreateTran
 /// eg. /transport/create?type=recv
 #[post("/transport/create")]
 pub async fn create_transport(
-    client: ClientEx,
+    client: VoiceClientEx,
     query: Query<TransportTypeQuery>,
 ) -> CreateTransportResponse {
     use CreateTransportError::*;
@@ -174,7 +174,7 @@ pub type ConnectTransportResponse = Result<&'static str, ConnectTransportError>;
 ///
 #[post("/transport/connect")]
 pub async fn connect_transport(
-    client: ClientEx,
+    client: VoiceClientEx,
     request: Json<ConnectTransportRequest>,
     query: Query<TransportTypeQuery>,
 ) -> ConnectTransportResponse {

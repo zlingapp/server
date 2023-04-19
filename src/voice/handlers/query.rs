@@ -2,7 +2,7 @@ use actix_web::{get, web::Json};
 use derive_more::{Display, Error};
 use serde::Serialize;
 
-use crate::client::ClientEx;
+use crate::voice::client::VoiceClientEx;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,7 +18,7 @@ impl actix_web::error::ResponseError for QueryChannelError {}
 
 #[get("/peers")]
 pub async fn query_channel(
-    client: ClientEx,
+    client: VoiceClientEx,
 ) -> Result<Json<Vec<ChannelMemberInfo>>, QueryChannelError> {
     let reply;
     {

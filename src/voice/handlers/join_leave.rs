@@ -12,10 +12,10 @@ use log::{info, warn};
 use mediasoup::{rtp_parameters::RtpCapabilitiesFinalized, worker_manager::WorkerManager};
 use serde::{Deserialize, Serialize};
 
-use crate::{
+use crate::voice::{
     channel::create_channel,
-    client::{Client, ClientEx},
-    Channels, Clients,
+    client::{VoiceClient, VoiceClientEx},
+    VoiceChannels, VoiceClients,
 };
 
 #[derive(Deserialize)]
@@ -46,8 +46,8 @@ pub type JoinVcResponse = Result<Json<JoinVcReply>, JoinVcError>;
 
 #[get("/join")]
 pub async fn join_vc(
-    clients: Data<Clients>,
-    channels: Data<Channels>,
+    clients: Data<VoiceClients>,
+    channels: Data<VoiceChannels>,
     wm: Data<WorkerManager>,
     query: Query<JoinVcQuery>,
 ) -> JoinVcResponse {
@@ -61,7 +61,7 @@ pub async fn join_vc(
     };
 
     // create a new client
-    let client = Arc::new(Client::new_random(channel.clone()));
+    let client = Arc::new(VoiceClient::new_random(channel.clone()));
 
     // add the client to the channel's client list
     channel.clients.lock().unwrap().push(client.clone());
@@ -148,9 +148,9 @@ pub async fn join_vc(
 
 #[get("/leave")]
 pub async fn leave_vc(
-    client: ClientEx,
-    clients: Data<Clients>,
-    channels: Data<Channels>,
+    client: VoiceClientEx,
+    clients: Data<VoiceClients>,
+    channels: Data<VoiceChannels>,
 ) -> Result<HttpResponse, Error> {
     client
         .channel
