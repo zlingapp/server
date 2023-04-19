@@ -106,14 +106,6 @@ impl VoiceChannel {
             .await;
         self.notify_client_left(client).await;
     }
-
-    pub async fn destroy(&self, global_clients: Arc<VoiceClients>, global_channels: Arc<VoiceChannels>) {
-        for client in self.clients.lock().unwrap().iter() {
-            self.disconnect_client(client, global_clients.clone(), global_channels.clone())
-                .await;
-            // on the last iteration, the channel will be removed from the channels map, destroying it
-        }
-    }
 }
 
 impl Drop for VoiceChannel {

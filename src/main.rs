@@ -5,8 +5,11 @@ use log::info;
 use mediasoup::worker_manager::WorkerManager;
 use voice::{VoiceChannels, VoiceClients};
 
+use crate::auth::user::UserManager;
+
 mod util;
 mod voice;
+mod auth;
 
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
 
@@ -15,6 +18,9 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     info!("Version: {}", env!("CARGO_PKG_VERSION"));
+
+    // auth related
+    let user_manager = Data::new(UserManager::new());
 
     // voice chat related
     voice::options::initialize_all();
@@ -29,10 +35,12 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             // setup voice api
-            .app_data(voice_worker_manager.clone())
+            .app_data(Data::clone(&voice_worker_manager))
             .app_data(Data::clone(&voice_clients))
             .app_data(Data::clone(&voice_channels))
             .service(voice::handlers::scope())
+            .app_data(Data::clone(&user_manager))
+            .service(auth::handlers::scope())
     })
     .workers(2)
     .bind("127.0.0.1:8080")?
