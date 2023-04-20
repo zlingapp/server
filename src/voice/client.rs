@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     ops::Deref,
+    pin::Pin,
     sync::{Arc, Mutex, RwLock},
 };
 
@@ -10,13 +11,17 @@ use actix_web::{
     web::{Data, Query},
     FromRequest,
 };
+use futures::Future;
 use log::warn;
 use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcTransport};
 use nanoid::nanoid;
 use serde::Deserialize;
 
-use crate::voice::{channel::VoiceChannel, VoiceClients, MutexMap};
-use crate::util::constant_time_compare;
+use crate::{util::constant_time_compare, auth::user::User};
+use crate::{
+    auth::user::{UserEx, UserManager},
+    voice::{channel::VoiceChannel, MutexMap, VoiceClients},
+};
 
 pub struct VoiceClient {
     pub identity: String,
@@ -77,107 +82,116 @@ impl Deref for VoiceClientEx {
 
 impl FromRequest for VoiceClientEx {
     type Error = actix_web::Error;
-
-    type Future = std::future::Ready<Result<Self, Self::Error>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
 
     fn from_request(
         req: &actix_web::HttpRequest,
         _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
-        let trying_to_connect_to_ws = req.path() == "/voice/ws" && req.method() == "GET";
+        // validate session
+        let req = req.clone();
 
-        let rtc_identity;
-        let rtc_token;
+        Box::pin(async move {
+            // validate session
+            UserEx::from_request(&req, &mut actix_web::dev::Payload::None).await?;
+            
+            // todo: a bunch of logic & checks here to make sure the user is allowed to connect to the channel
+            //       use the return value of the above line to get the user
+ 
+            let trying_to_connect_to_ws = req.path() == "/voice/ws" && req.method() == "GET";
 
-        if trying_to_connect_to_ws {
-            // rtc identity and token are in the query string for ws connections
-            // this is because the RTC-Identity and RTC-Token headers can't be set
-            // because WebSocket() in the browser doesn't allow setting request options! :D
+            let rtc_identity;
+            let rtc_token;
 
-            #[derive(Deserialize)]
-            struct IdAndToken {
-                #[serde(rename = "i")]
-                rtc_identity: String,
-                #[serde(rename = "t")]
-                rtc_token: String,
-            }
-            let query = Query::<IdAndToken>::from_query(req.query_string());
-
-            match query {
-                Ok(q) => {
-                    rtc_identity = Some(q.rtc_identity.clone());
-                    rtc_token = Some(q.rtc_token.clone());
+            if trying_to_connect_to_ws {
+                // rtc identity and token are in the query string for ws connections
+                // this is because the RTC-Identity and RTC-Token headers can't be set
+                // because WebSocket() in the browser doesn't allow setting request options! :D
+                #[derive(Deserialize)]
+                struct IdAndToken {
+                    #[serde(rename = "i")]
+                    rtc_identity: String,
+                    #[serde(rename = "t")]
+                    rtc_token: String,
                 }
-                Err(_) => {
-                    return std::future::ready(Err(ErrorUnauthorized("access_denied")));
+                let query = Query::<IdAndToken>::from_query(req.query_string());
+
+                match query {
+                    Ok(q) => {
+                        rtc_identity = Some(q.rtc_identity.clone());
+                        rtc_token = Some(q.rtc_token.clone());
+                    }
+                    Err(_) => {
+                        return Err(ErrorUnauthorized("access_denied"));
+                    }
                 }
+            } else {
+                // extract the RTC-Identity header
+                rtc_identity = req
+                    .headers()
+                    .get("RTC-Identity")
+                    .and_then(|h| h.to_str().ok())
+                    .map(|s| s.to_string());
+
+                // extract the RTC-Token header
+                rtc_token = req
+                    .headers()
+                    .get("RTC-Token")
+                    .and_then(|h| h.to_str().ok())
+                    .map(|s| s.to_string());
             }
-        } else {
-            // extract the RTC-Identity header
-            rtc_identity = req
-                .headers()
-                .get("RTC-Identity")
-                .and_then(|h| h.to_str().ok())
-                .map(|s| s.to_string());
 
-            // extract the RTC-Token header
-            rtc_token = req
-                .headers()
-                .get("RTC-Token")
-                .and_then(|h| h.to_str().ok())
-                .map(|s| s.to_string());
-        }
+            if rtc_token == None || rtc_identity == None {
+                warn!(
+                    "no token and/or identity provided, denying access to {}",
+                    req.path()
+                );
+                return Err(ErrorUnauthorized("access_denied"));
+            }
 
-        if rtc_token == None || rtc_identity == None {
-            warn!(
-                "no token and/or identity provided, denying access to {}",
-                req.path()
-            );
-            return std::future::ready(Err(ErrorUnauthorized("access_denied")));
-        }
+            // SAFETY: this is fine because of the
+            let rtc_identity = rtc_identity.unwrap();
+            let rtc_token = rtc_token.unwrap();
 
-        // SAFETY: this is fine because of the
-        let rtc_identity = rtc_identity.unwrap();
-        let rtc_token = rtc_token.unwrap();
+            // get the client with that identity
+            let client = req
+                .app_data::<Data<VoiceClients>>()
+                .unwrap()
+                .lock()
+                .unwrap()
+                .get(&rtc_identity)
+                .cloned();
 
-        // get the client with that identity
-        let client = req
-            .app_data::<Data<VoiceClients>>()
-            .unwrap()
-            .lock()
-            .unwrap()
-            .get(&rtc_identity)
-            .cloned();
+            if client.is_none() {
+                warn!(
+                    "unknown identity {:?}, denying access to {}",
+                    rtc_identity,
+                    req.path()
+                );
+                return Err(ErrorUnauthorized("access_denied"));
+            }
 
-        if client.is_none() {
-            warn!(
-                "unknown identity {:?}, denying access to {}",
-                rtc_identity,
-                req.path()
-            );
-            return std::future::ready(Err(ErrorUnauthorized("access_denied")));
-        }
+            let client = client.unwrap();
 
-        let client = client.unwrap();
+            if !constant_time_compare(&client.token, &rtc_token) {
+                warn!(
+                    "token mismatch for {:?}, denying access to {}",
+                    client.identity,
+                    req.path()
+                );
+                return Err(ErrorUnauthorized("access_denied"));
+            }
 
-        if !constant_time_compare(&client.token, &rtc_token) {
-            warn!(
-                "token mismatch for {:?}, denying access to {}",
-                client.identity,
-                req.path()
-            );
-            return std::future::ready(Err(ErrorUnauthorized("access_denied")));
-        }
+            if !trying_to_connect_to_ws && client.socket_session.read().unwrap().is_none() {
+                warn!(
+                    "no socket session for {:?}, denying access to {}",
+                    client.identity,
+                    req.path()
+                );
+                return Err(ErrorBadRequest("event_socket_not_connected"));
+            }
 
-        if !trying_to_connect_to_ws && client.socket_session.read().unwrap().is_none() {
-            warn!(
-                "no socket session for {:?}, denying access to {}",
-                client.identity,
-                req.path()
-            );
-            return std::future::ready(Err(ErrorBadRequest("event_socket_not_connected")));
-        }
-
-        return std::future::ready(Ok(VoiceClientEx(client)));
+            return Ok(VoiceClientEx(client));
+        })
     }
 }

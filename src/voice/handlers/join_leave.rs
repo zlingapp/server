@@ -12,10 +12,13 @@ use log::{info, warn};
 use mediasoup::{rtp_parameters::RtpCapabilitiesFinalized, worker_manager::WorkerManager};
 use serde::{Deserialize, Serialize};
 
-use crate::voice::{
-    channel::create_channel,
-    client::{VoiceClient, VoiceClientEx},
-    VoiceChannels, VoiceClients,
+use crate::{
+    auth::user::UserEx,
+    voice::{
+        channel::create_channel,
+        client::{VoiceClient, VoiceClientEx},
+        VoiceChannels, VoiceClients,
+    },
 };
 
 #[derive(Deserialize)]
@@ -46,6 +49,7 @@ pub type JoinVcResponse = Result<Json<JoinVcReply>, JoinVcError>;
 
 #[get("/join")]
 pub async fn join_vc(
+    _: UserEx, // ensure valid session
     clients: Data<VoiceClients>,
     channels: Data<VoiceChannels>,
     wm: Data<WorkerManager>,

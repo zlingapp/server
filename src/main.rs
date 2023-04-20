@@ -7,9 +7,9 @@ use voice::{VoiceChannels, VoiceClients};
 
 use crate::auth::user::UserManager;
 
+mod auth;
 mod util;
 mod voice;
-mod auth;
 
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
 
@@ -33,7 +33,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         // add logging middleware
         App::new()
-            .wrap(actix_web::middleware::Logger::default())
+            .wrap(actix_web::middleware::Logger::new("%{r}a %r -> %s in %Dms").log_target("http"))
             // setup voice api
             .app_data(Data::clone(&voice_worker_manager))
             .app_data(Data::clone(&voice_clients))
