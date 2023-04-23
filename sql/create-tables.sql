@@ -5,7 +5,6 @@ CREATE TABLE users (
     email       text        NOT NULL,
     password    text        NOT NULL,
     avatar      text        NOT NULL,
-    guilds      text[]      NOT NULL DEFAULT array[]::text[],
     friends     text[]      NOT NULL DEFAULT array[]::text[],
     created_at  timestamp   NOT NULL DEFAULT now(),
     updated_at  timestamp   NOT NULL DEFAULT now()
@@ -14,16 +13,17 @@ CREATE TABLE guilds (
     id          text        NOT NULL PRIMARY KEY,
     name        text        NOT NULL,
     owner       text        NOT NULL,
-    created_at  timestamp   NOT NULL,
-    updated_at  timestamp   NOT NULL,
-    permissions json        NOT NULL
+    created_at  timestamp   NOT NULL DEFAULT now(),
+    updated_at  timestamp   NOT NULL DEFAULT now(),
+    permissions json        NOT NULL DEFAULT '{}'::json
 );
 CREATE TABLE members (
     user_id     text        NOT NULL,
     guild_id    text        NOT NULL,
     joined_at   timestamp   NOT NULL,
-    permissions json       NOT NULL,
-    roles       text[]      NOT NULL,
+    permissions json        NOT NULL DEFAULT '{}'::json,
+    roles       text[]      NOT NULL DEFAULT array[]::text[],
+    nickname    text,
     PRIMARY KEY (user_id, guild_id)
 );
 CREATE TYPE channel_type AS ENUM ('text', 'voice');
@@ -32,9 +32,9 @@ CREATE TABLE channels (
     type        channel_type    NOT NULL,
     name        text            NOT NULL,
     guild_id    text            NOT NULL,
-    created_at  timestamp       NOT NULL,
-    updated_at  timestamp       NOT NULL,
-    permissions json           NOT NULL
+    created_at  timestamp       NOT NULL DEFAULT now(),
+    updated_at  timestamp       NOT NULL DEFAULT now(),
+    permissions json            NOT NULL DEFAULT '{}'::json
 );
 CREATE TABLE messages (
     id          text        NOT NULL PRIMARY KEY,
@@ -42,16 +42,16 @@ CREATE TABLE messages (
     channel_id  text        NOT NULL,
     user_id     text        NOT NULL,
     content     text        NOT NULL,
-    created_at  timestamp   NOT NULL,
-    updated_at  timestamp   NOT NULL
+    created_at  timestamp   NOT NULL DEFAULT now(),
+    updated_at  timestamp   NOT NULL DEFAULT now()
 );
 CREATE TABLE roles (
     id          text        NOT NULL PRIMARY KEY,
     name        text        NOT NULL,
     guild_id    text        NOT NULL,
-    created_at  timestamp   NOT NULL,
-    updated_at  timestamp   NOT NULL,
+    created_at  timestamp   NOT NULL DEFAULT now(),
+    updated_at  timestamp   NOT NULL DEFAULT now(),
     created_by  text        NOT NULL,
-    permissions json       NOT NULL
+    permissions json        NOT NULL DEFAULT '{}'::json
 );
 COMMIT;
