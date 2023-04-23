@@ -8,10 +8,12 @@ use std::ops::Deref;
 
 use actix_web::{web::Data, FromRequest};
 use futures::Future;
+use log::warn;
 use nanoid::nanoid;
 use rand::Rng;
+use sqlx::{postgres::PgQueryResult, query};
 
-use crate::util::constant_time_compare;
+use crate::{auth::crypto, DB};
 
 pub type UserId = String;
 pub type SessionToken = String;
@@ -21,13 +23,54 @@ pub struct User {
     pub name: String,
     pub avatar: String,
     pub email: String,
-    pub password: String, // todo: remove me! replace with db lookup!
-    pub sessions: RwLock<Vec<SessionToken>>,
+}
+
+impl User {
+    pub async fn register_in_db(&self, db: &DB, password: &str) -> Result<bool, sqlx::Error> {
+        let rows_affected = query!(
+            r#"
+                INSERT INTO users (id, name, email, avatar, password) 
+                SELECT $1, $2, $3, $4, $5 
+                FROM (SELECT 1) AS t
+                WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = $3)
+            "#,
+            self.id,
+            self.name,
+            self.email,
+            self.avatar,
+            crypto::hash(password)
+        )
+        .execute(db.as_ref())
+        .await?.rows_affected();
+
+        Ok(rows_affected > 0)
+    }
+
+    pub async fn fetch_by_id(id: &str, db: &DB) -> Option<Self> {
+        let user = query!(
+            "SELECT id, name, email, avatar FROM users WHERE id = $1",
+            id
+        )
+        .fetch_one(db.as_ref())
+        .await;
+
+        match user {
+            Ok(user) => Some(Self {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                avatar: user.avatar,
+            }),
+            Err(e) => {
+                warn!("Failed to get user from db: {}", e);
+                None
+            }
+        }
+    }
 }
 
 pub struct UserManager {
-    // todo: use a database for this
-    users: RwLock<HashMap<UserId, Arc<User>>>,
+    db: DB,
     // todo: use a cache with expiry and access ttl here
     sessions: RwLock<HashMap<SessionToken, Arc<User>>>,
 }
@@ -53,72 +96,66 @@ pub enum AuthResult {
 }
 
 impl UserManager {
-    pub fn new() -> Self {
+    pub fn new(db: DB) -> Self {
         Self {
-            users: RwLock::new(HashMap::new()),
+            db,
             sessions: RwLock::new(HashMap::new()),
         }
     }
 
     // todo: implement db stuff
-    pub fn register_user(&self, name: &str, email: &str, password: &str) -> Option<Arc<User>> {
-        if self
-            .users
-            .read()
-            .unwrap()
-            .values()
-            .any(|u| u.email == email || u.name == name)
-        {
-            return None;
-        }
-
+    pub async fn register_user(
+        &self,
+        name: &str,
+        email: &str,
+        password: &str,
+    ) -> Option<Arc<User>> {
         // todo: validate some regex here...
         let user = Arc::new(User {
             id: nanoid!(),
             name: String::from_iter([name, "#", &generate_discrim()]),
             email: email.to_owned(),
             avatar: "https://placehold.co/32".to_owned(),
-            password: password.to_owned(),
-            sessions: RwLock::new(Vec::new()),
         });
 
-        self.users
-            .write()
-            .unwrap()
-            .insert(user.id.clone(), user.clone());
-
-        Some(user)
+        match user.register_in_db(&self.db, password).await {
+            Ok(did_create) => {
+                if !did_create {
+                    // user already exists
+                    return None;
+                }
+                Some(user)
+            },
+            Err(e) => {
+                warn!("Failed to create user: {}", e);
+                None
+            }
+        }
     }
 
-    pub fn get_user_by_id(&self, id: &str) -> Option<Arc<User>> {
-        self.users.read().unwrap().get(id).cloned()
-    }
+    pub async fn auth_new_session(&self, email: &str, password: &str) -> AuthResult {
+        let user = query!(
+            "SELECT id, name, email, avatar, password FROM users WHERE email = $1",
+            email
+        )
+        .fetch_one(self.db.as_ref())
+        .await;
 
-    pub fn get_user_by_name(&self, username: &str) -> Option<Arc<User>> {
-        self.users
-            .read()
-            .unwrap()
-            .values()
-            .find(|user| user.name == username)
-            .cloned()
-    }
+        match user {
+            Ok(record) => {
+                if !crypto::verify(password, &record.password) {
+                    return AuthResult::Failure;
+                }
 
-    pub fn get_user_by_email(&self, email: &str) -> Option<Arc<User>> {
-        self.users
-            .read()
-            .unwrap()
-            .values()
-            .find(|user| user.email == email)
-            .cloned()
-    }
+                let user = Arc::new(User {
+                    id: record.id,
+                    name: record.name,
+                    email: record.email,
+                    avatar: record.avatar,
+                });
 
-    pub fn auth_new_session(&self, email: &str, password: &str) -> AuthResult {
-        if let Some(user) = self.get_user_by_email(email) {
-            // todo: replace with db lookup!
-            if constant_time_compare(&user.password, password) {
                 let session = nanoid!(64);
 
-                user.sessions.write().unwrap().push(session.clone());
                 self.sessions
                     .write()
                     .unwrap()
@@ -126,17 +163,26 @@ impl UserManager {
 
                 return AuthResult::Success { user, session };
             }
+            Err(e) => {
+                warn!("Failed to get user from db: {}", e);
+                return AuthResult::Failure;
+            }
         }
-        AuthResult::Failure
     }
 
     pub fn get_user_by_session(&self, session: &str) -> Option<Arc<User>> {
         self.sessions.read().unwrap().get(session).cloned()
     }
 
-    pub fn erase_session(&self, user: &User, session: &str) {
-        user.sessions.write().unwrap().retain(|s| s != session);
-        self.sessions.write().unwrap().remove(session);
+    pub fn erase_session(&self, user: &User, session: &str) -> bool {
+        {
+            let lock = self.sessions.read().unwrap();
+            let stored_user = lock.get(session).unwrap();
+            if stored_user.id != user.id {
+                return false;
+            }
+        }
+        self.sessions.write().unwrap().remove(session).is_some()
     }
 }
 

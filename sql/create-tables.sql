@@ -5,10 +5,10 @@ CREATE TABLE users (
     email       text        NOT NULL,
     password    text        NOT NULL,
     avatar      text        NOT NULL,
-    guilds      text[]      NOT NULL,
-    friends     text[]      NOT NULL,
-    created_at  timestamp   NOT NULL,
-    updated_at  timestamp   NOT NULL
+    guilds      text[]      NOT NULL DEFAULT array[]::text[],
+    friends     text[]      NOT NULL DEFAULT array[]::text[],
+    created_at  timestamp   NOT NULL DEFAULT now(),
+    updated_at  timestamp   NOT NULL DEFAULT now()
 );
 CREATE TABLE guilds (
     id          text        NOT NULL PRIMARY KEY,

@@ -31,7 +31,7 @@ fn build_session_cookie(session: &str) -> CookieBuilder {
 #[post("/login")]
 pub async fn login(um: Data<UserManager>, req: Json<LoginRequest>) -> Result<HttpResponse, Error> {
     use crate::auth::user::AuthResult::*;
-    let auth_result = um.auth_new_session(&req.email, &req.password);
+    let auth_result = um.auth_new_session(&req.email, &req.password).await;
 
     Ok(match auth_result {
         Success { user, session } => {
@@ -59,7 +59,7 @@ pub async fn register(
     um: Data<UserManager>,
     req: Json<RegisterRequest>,
 ) -> Result<HttpResponse, Error> {
-    match um.register_user(&req.username, &req.email, &req.password) {
+    match um.register_user(&req.username, &req.email, &req.password).await {
         Some(_) => Ok(HttpResponse::Ok().body("success")),
         None => Ok(HttpResponse::Conflict().finish()),
     }
@@ -82,7 +82,12 @@ pub async fn logout(
     user: UserEx,
     session: SessionEx,
 ) -> Result<HttpResponse, Error> {
-    um.erase_session(&user, &session);
+    if !um.erase_session(&user, &session) {
+        // either the session was already deleted or the user is trying to delete someone else's session
+        return Ok(
+            HttpResponse::BadRequest().body("session_delete_failed")
+        )
+    };
 
     let death_cookie = build_session_cookie("NO_SESSION_DELETE_ME")
         .expires(OffsetDateTime::from_unix_timestamp(0).unwrap())

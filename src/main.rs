@@ -28,9 +28,7 @@ async fn main() -> std::io::Result<()> {
     let db_url = options::db_conn_string();
 
     // database
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url);
+    let pool = PgPoolOptions::new().max_connections(5).connect(&db_url);
 
     let pool = match pool.await {
         Ok(pool) => {
@@ -46,7 +44,7 @@ async fn main() -> std::io::Result<()> {
     let pool: DB = Data::new(pool);
 
     // auth related
-    let user_manager = Data::new(UserManager::new());
+    let user_manager = Data::new(UserManager::new(Data::clone(&pool)));
 
     // voice chat related
     let voice_worker_manager = Data::new(WorkerManager::new());
