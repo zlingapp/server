@@ -43,6 +43,12 @@ lazy_static! {
     static ref PREFER_TCP: bool = var("PREFER_TCP", "false");
 
     static ref INITIAL_AVAILABLE_OUTGOING_BITRATE: u32 = var("INITIAL_AVAILABLE_OUTGOING_BITRATE", "600000");
+
+    static ref DB_HOST: String = var("DB_HOST", "localhost");
+    static ref DB_PORT: u16 = var("DB_PORT", "5432");
+    static ref DB_USER: String = var("DB_USER", "chat_backend");
+    static ref DB_PASSWORD: String = var("DB_PASSWORD", "changeme");
+    static ref DB_NAME: String = var("DB_NAME", "chat_backend");
 }
 
 pub fn media_codecs() -> Vec<RtpCodecCapability> {
@@ -97,6 +103,13 @@ pub fn webrtc_transport_options() -> WebRtcTransportOptions {
     opts
 }
 
+pub fn db_conn_string() -> String {
+    format!(
+        "postgres://{}:{}@{}:{}/{}",
+        *DB_USER, *DB_PASSWORD, *DB_HOST, *DB_PORT, *DB_NAME
+    )
+}
+
 pub fn initialize_all() {
     lazy_static::initialize(&RTC_PORT_MIN);
     lazy_static::initialize(&RTC_PORT_MAX);
@@ -119,6 +132,12 @@ pub fn initialize_all() {
     if !*ENABLE_UDP && *PREFER_UDP {
         panic!("PREFER_UDP cannot be true if ENABLE_UDP is false");
     }
+
+    lazy_static::initialize(&DB_HOST);
+    lazy_static::initialize(&DB_PORT);
+    lazy_static::initialize(&DB_USER);
+    lazy_static::initialize(&DB_PASSWORD);
+    lazy_static::initialize(&DB_NAME);
 }
 
 pub fn print_all() {
@@ -128,4 +147,5 @@ pub fn print_all() {
     info!("config: UDP Enabled: {}", *ENABLE_UDP);
     info!("config: TCP Enabled: {}", *ENABLE_TCP);
     info!("config: Preferred: {}", if *PREFER_UDP { "UDP" } else { "TCP" });
+    info!("config: Database: {} at {}:{}", *DB_NAME, *DB_HOST, *DB_PORT);
 }

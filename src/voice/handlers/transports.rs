@@ -12,7 +12,8 @@ use mediasoup::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::voice::{client::VoiceClientEx, options::webrtc_transport_options};
+use crate::voice::{client::VoiceClientEx};
+use crate::options::webrtc_transport_options;
 
 /*
    There are two handlers registered below for transports.

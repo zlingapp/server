@@ -3,11 +3,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::voice::{
-    client::VoiceClient,
-    options::{router_options, worker_settings},
-    VoiceChannels, VoiceClients,
-};
+use crate::options::{router_options, worker_settings};
+use crate::voice::{client::VoiceClient, VoiceChannels, VoiceClients};
 use actix_web::web::Data;
 use log::{info, warn};
 use mediasoup::{
@@ -62,7 +59,6 @@ impl VoiceChannel {
         global_clients: Arc<VoiceClients>,
         global_channels: Arc<VoiceChannels>,
     ) {
-        
         // remove the client from the channel
         self.clients
             .lock()
