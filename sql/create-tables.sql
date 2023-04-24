@@ -20,7 +20,7 @@ CREATE TABLE guilds (
 CREATE TABLE members (
     user_id     text        NOT NULL,
     guild_id    text        NOT NULL,
-    joined_at   timestamp   NOT NULL,
+    joined_at   timestamp   NOT NULL DEFAULT now(),
     permissions json        NOT NULL DEFAULT '{}'::json,
     roles       text[]      NOT NULL DEFAULT array[]::text[],
     nickname    text,
