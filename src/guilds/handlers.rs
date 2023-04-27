@@ -20,6 +20,14 @@ use serde_json::json;
 
 use crate::{auth::user::UserEx, DB};
 
+pub fn scope() -> actix_web::Scope {
+    web::scope("/guilds")
+        .service(create_guild)
+        .service(delete_guild)
+        .service(list_guilds)
+        .service(join_guild)
+}
+
 #[derive(Deserialize)]
 pub struct CreateGuildQuery {
     name: String,
@@ -97,7 +105,7 @@ pub async fn create_guild(
 
 #[derive(Deserialize)]
 pub struct GuildIdQuery {
-    id: String,
+    pub id: String,
 }
 
 #[post("/delete")]
@@ -130,7 +138,7 @@ pub async fn delete_guild(
 
 #[derive(Serialize)]
 pub struct GuildNameAndId {
-    guild_id: String,
+    id: String,
     name: String,
 }
 
@@ -142,7 +150,7 @@ pub async fn list_guilds(
     let guilds_list = sqlx::query_as!(
         GuildNameAndId,
         r#"
-            SELECT members.guild_id, guilds.name FROM members, guilds 
+            SELECT members.guild_id AS "id", guilds.name FROM members, guilds 
             WHERE members.user_id = $1 AND members.guild_id = guilds.id
         "#,
         user.id

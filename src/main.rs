@@ -13,6 +13,7 @@ mod options;
 mod util;
 mod voice;
 mod guilds;
+mod channels;
 
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
 pub type DB = Data<Pool<Postgres>>;
@@ -65,6 +66,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&user_manager))
             .service(auth::handlers::scope())
             .service(guilds::handlers::scope())
+            .service(channels::handlers::scope())
     })
     .workers(2)
     .bind("127.0.0.1:8080")?
