@@ -12,7 +12,7 @@ use actix_web::{
     error::{ErrorInternalServerError, ErrorUnauthorized},
     get,
     web::{Data, Json, Query, self},
-    Error, HttpResponse,
+    Error,
 };
 use log::warn;
 use serde::Serialize;

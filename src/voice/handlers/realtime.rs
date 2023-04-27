@@ -174,15 +174,4 @@ impl VoiceChannel {
 
         self.send_to_all_except(&client, event.to_string()).await;
     }
-
-    pub async fn notify_producer_closed(&self, client: &VoiceClient, producer_id: String) {
-        // serialize the message
-        let event = json!({
-            "type": "producer_closed",
-            "identity": client.identity,
-            "producer_id": producer_id,
-        });
-
-        self.send_to_all_except(&client, event.to_string()).await;
-    }
 }

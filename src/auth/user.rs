@@ -11,7 +11,7 @@ use futures::Future;
 use log::warn;
 use nanoid::nanoid;
 use rand::Rng;
-use sqlx::{postgres::PgQueryResult, query};
+use sqlx::query;
 
 use crate::{auth::crypto, DB};
 

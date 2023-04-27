@@ -17,9 +17,9 @@ use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcT
 use nanoid::nanoid;
 use serde::Deserialize;
 
-use crate::{util::constant_time_compare, auth::user::User};
+use crate::util::constant_time_compare;
 use crate::{
-    auth::user::{UserEx, UserManager},
+    auth::user::UserEx,
     voice::{channel::VoiceChannel, MutexMap, VoiceClients},
 };
 
@@ -94,10 +94,10 @@ impl FromRequest for VoiceClientEx {
         Box::pin(async move {
             // validate session
             UserEx::from_request(&req, &mut actix_web::dev::Payload::None).await?;
-            
+
             // todo: a bunch of logic & checks here to make sure the user is allowed to connect to the channel
             //       use the return value of the above line to get the user
- 
+
             let trying_to_connect_to_ws = req.path() == "/voice/ws" && req.method() == "GET";
 
             let rtc_identity;

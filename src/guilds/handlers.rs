@@ -10,7 +10,7 @@
 use actix_web::{
     error::{ErrorConflict, ErrorInternalServerError, ErrorUnauthorized},
     get, post,
-    web::{self, Data, Json, Query},
+    web::{self, Json, Query},
     HttpResponse,
 };
 use log::warn;
