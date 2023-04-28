@@ -9,13 +9,15 @@
 */
 
 use actix_web::{
-    error::{ErrorInternalServerError, ErrorUnauthorized},
-    get,
-    web::{Data, Json, Query, self},
-    Error,
+    error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized},
+    get, post,
+    web::{self, Data, Json, Query},
+    Error, HttpResponse,
 };
 use log::warn;
-use serde::Serialize;
+use nanoid::nanoid;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::{
     auth::user::{UserEx, UserManager},
@@ -24,10 +26,12 @@ use crate::{
 };
 
 pub fn scope() -> actix_web::Scope {
-    web::scope("/channels").service(list_channels)
+    web::scope("/channels")
+        .service(list_channels)
+        .service(create_channel)
 }
 
-#[derive(sqlx::Type, Serialize, Debug)]
+#[derive(Copy, Clone, sqlx::Type, Serialize, Deserialize, Debug)]
 #[sqlx(type_name = "channel_type", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum ChannelType {
@@ -79,4 +83,108 @@ async fn list_channels(
     })?;
 
     Ok(Json(channels))
+}
+
+#[derive(Deserialize)]
+pub struct CreateChannelRequest {
+    name: String,
+    guild_id: String,
+    r#type: ChannelType,
+}
+
+#[post("/create")]
+async fn create_channel(
+    db: DB,
+    um: Data<UserManager>,
+    user: UserEx,
+    query: Json<CreateChannelRequest>,
+) -> Result<HttpResponse, Error> {
+    let user_in_guild = um
+        .is_user_in_guild(&user.id, &query.guild_id)
+        .await
+        .map_err(|e| {
+            warn!(
+                "failed to check if user {} is in guild {}: {}",
+                user.id, query.guild_id, e
+            );
+            ErrorInternalServerError("")
+        })?;
+
+    if !user_in_guild {
+        warn!("user not in guild");
+        return Err(ErrorUnauthorized("access_denied"));
+    }
+
+    let channel_id = sqlx::query!(
+        r#"INSERT INTO channels (guild_id, id, name, type) VALUES ($1, $2, $3, $4) RETURNING id"#,
+        query.guild_id,
+        nanoid!(),
+        query.name,
+        query.r#type as ChannelType
+    )
+    .fetch_one(db.as_ref())
+    .await
+    .map_err(|e| {
+        warn!("failed to create channel: {}", e);
+        ErrorInternalServerError("")
+    })?
+    .id;
+
+    Ok(HttpResponse::Created().json(json!({ "id": channel_id })))
+}
+
+#[derive(Deserialize)]
+pub struct SendMessageRequest {
+    guild_id: String,
+    channel_id: String,
+    content: String,
+}
+
+#[post("/send")]
+async fn send_message(
+    db: DB,
+    user: UserEx,
+    um: Data<UserManager>,
+    req: Json<SendMessageRequest>,
+) -> Result<HttpResponse, Error> {
+    if req.content.len() > 2000 {
+        return Err(ErrorBadRequest("content_too_long"));
+    }
+
+    let user_in_guild = um
+        .is_user_in_guild(&user.id, &req.guild_id)
+        .await
+        .map_err(|e| {
+            warn!(
+                "failed to check if user {} is in guild {}: {}",
+                user.id, req.guild_id, e
+            );
+            ErrorInternalServerError("")
+        })?;
+
+    if !user_in_guild {
+        warn!("user not in guild");
+        return Err(ErrorUnauthorized("access_denied"));
+    }
+
+    let message_id = sqlx::query!(
+        r#"INSERT INTO messages 
+        (id, guild_id, channel_id, user_id, content) 
+        VALUES ($1, $2, $3, $4, $5) RETURNING id
+        "#,
+        nanoid!(),
+        req.guild_id,
+        req.channel_id,
+        user.id,
+        req.content
+    )
+    .fetch_one(db.as_ref())
+    .await
+    .map_err(|e| {
+        warn!("failed to send message: {}", e);
+        ErrorInternalServerError("send_failed")
+    })?
+    .id;
+
+    Ok(HttpResponse::Ok().json(json!({ "id": message_id })))
 }
