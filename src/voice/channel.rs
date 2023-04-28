@@ -56,9 +56,11 @@ impl VoiceChannel {
     pub async fn erase_client(
         &self,
         client_identity: &str,
-        global_clients: Arc<VoiceClients>,
-        global_channels: Arc<VoiceChannels>,
+        global_clients: &VoiceClients,
+        global_channels: &VoiceChannels,
     ) {
+        info!("Channel::erase_client()");
+
         // remove the client from the channel
         self.clients
             .lock()
@@ -67,6 +69,7 @@ impl VoiceChannel {
 
         // remove the client from the global clients map
         let removed = global_clients.lock().unwrap().remove(client_identity);
+        
         if removed.is_none() {
             // this should never happen in theory
             warn!(
@@ -74,7 +77,7 @@ impl VoiceChannel {
                 client_identity
             );
         } else {
-            removed.unwrap().cleanup().await;
+            removed.unwrap().cleanup();
         }
 
         // if the channel is empty, remove it from the global channels map
@@ -83,6 +86,8 @@ impl VoiceChannel {
             // so we can safely remove it from the map
             global_channels.lock().unwrap().remove(&self.id);
         }
+
+        println!("{:?}", global_channels.lock().unwrap().len());
 
         info!(
             "client[{:?}]: disconnected from {:?}, remaining: {}",
@@ -95,8 +100,8 @@ impl VoiceChannel {
     pub async fn disconnect_client(
         &self,
         client: &VoiceClient,
-        global_clients: Arc<VoiceClients>,
-        global_channels: Arc<VoiceChannels>,
+        global_clients: &VoiceClients,
+        global_channels: &VoiceChannels,
     ) {
         self.erase_client(&client.identity, global_clients, global_channels)
             .await;

@@ -25,7 +25,7 @@ pub async fn query_channel(
         let clients = client.channel.clients.lock().unwrap();
         reply = clients
             .iter()
-            .filter(|c| c.socket_session.read().unwrap().is_some())
+            .filter(|c| c.socket.read().unwrap().is_some())
             .filter(|c| c.identity != client.identity)
             .map(|c| ChannelMemberInfo {
                 identity: c.identity.clone(),

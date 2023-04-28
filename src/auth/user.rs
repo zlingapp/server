@@ -7,6 +7,7 @@ use std::{
 use std::ops::Deref;
 
 use actix_web::{web::Data, FromRequest};
+
 use futures::Future;
 use log::warn;
 use nanoid::nanoid;
@@ -73,7 +74,7 @@ impl User {
 pub struct UserManager {
     db: DB,
     // todo: use a cache with expiry and access ttl here
-    sessions: RwLock<HashMap<SessionToken, Arc<User>>>,
+    sessions: RwLock<HashMap<SessionToken, Arc<User>>>
 }
 
 // need to find a way to generate a unique discriminator...

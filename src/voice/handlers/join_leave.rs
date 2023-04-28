@@ -78,7 +78,7 @@ pub async fn join_vc(
         rtp: channel.router.rtp_capabilities().clone(),
     };
 
-    // the socket watchdog checks if the client has connected to the websocket in time
+    // the following closure checks if the client has connected to the websocket in time
     // if it hasn't, the client is removed from the channel silently
     {
         // two clones of the Arc<Client> are created here
@@ -87,53 +87,31 @@ pub async fn join_vc(
 
         let clients_inner = clients.clone();
 
-        // client_inner is moved into the async block
-        // clients_inner is moved into the async block
         let handle = Some(actix_rt::spawn(async move {
             sleep(Duration::from_secs(10)).await;
 
             // if the client hasn't connected to the websocket yet, remove it from the channel
-            if client_inner.socket_session.read().unwrap().is_none() {
+
+            if !match client_inner.socket.read().unwrap().as_ref() {
+                Some(socket) => socket.is_connected().await,
+                None => false,
+            } {
                 warn!(
-                    "client[{:?}]: watchdog: didn't connect to the websocket in time, removing",
+                    "client[{:?}]: initial connect: didn't connect to the websocket in time, removing",
                     client_inner.identity
                 );
+
                 client_inner
                     .channel
-                    .erase_client(
-                        &client_inner.identity,
-                        clients_inner.into_inner(),
-                        channels.into_inner(),
-                    )
+                    .erase_client(&client_inner.identity, &clients_inner, &channels)
                     .await;
-                return;
-            }
-
-            loop {
-                sleep(Duration::from_secs(10)).await;
-
-                // if the client hasn't sent a heartbeat in 10 seconds, remove it from the channel
-                let last_ping = client_inner.last_ping.read().unwrap();
-
-                if last_ping.is_none() || last_ping.unwrap().elapsed().as_secs() > 10 {
-                    warn!(
-                        "client[{:?}]: watchdog: didn't send a heartbeat in time, removing",
-                        client_inner.identity
-                    );
-                    client_inner
-                        .channel
-                        .disconnect_client(
-                            &client_inner,
-                            clients_inner.into_inner(),
-                            channels.into_inner(),
-                        )
-                        .await;
-                    return;
-                }
             }
         }));
 
-        *client_outer.socket_watchdog_handle.lock().unwrap() = handle;
+        *client_outer
+            .socket_initial_connect_watch_handle
+            .lock()
+            .unwrap() = handle;
     }
 
     info!(
@@ -158,7 +136,7 @@ pub async fn leave_vc(
 ) -> Result<HttpResponse, Error> {
     client
         .channel
-        .disconnect_client(&client, clients.into_inner(), channels.into_inner())
+        .disconnect_client(&client, &clients, &channels)
         .await;
     Ok(HttpResponse::Ok().finish())
 }

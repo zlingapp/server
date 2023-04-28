@@ -12,16 +12,16 @@ use actix_web::{
     FromRequest,
 };
 use futures::Future;
-use log::warn;
+use log::{info, warn};
 use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcTransport};
 use nanoid::nanoid;
 use serde::Deserialize;
 
-use crate::util::constant_time_compare;
 use crate::{
     auth::user::UserEx,
     voice::{channel::VoiceChannel, MutexMap, VoiceClients},
 };
+use crate::{realtime::socket::Socket, util::constant_time_compare};
 
 pub struct VoiceClient {
     pub identity: String,
@@ -34,10 +34,9 @@ pub struct VoiceClient {
     pub s2c_transport: RwLock<Option<WebRtcTransport>>,
     pub consumers: MutexMap<Consumer>,
 
-    pub socket_session: RwLock<Option<actix_ws::Session>>,
-    pub socket_watchdog_handle: Mutex<Option<JoinHandle<()>>>,
-
-    pub last_ping: RwLock<Option<std::time::Instant>>,
+    pub socket: RwLock<Option<Arc<Socket>>>,
+    // this is used to cancel the initial connect watch task
+    pub socket_initial_connect_watch_handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl VoiceClient {
@@ -46,26 +45,30 @@ impl VoiceClient {
             identity: nanoid!(),
             token: nanoid!(64),
             channel,
-            c2s_transport: RwLock::new(None),
-            producers: Mutex::new(HashMap::new()),
-            s2c_transport: RwLock::new(None),
-            consumers: Mutex::new(HashMap::new()),
-            socket_session: RwLock::new(None),
-            socket_watchdog_handle: Mutex::new(None),
-            last_ping: RwLock::new(None),
+            c2s_transport: None.into(),
+            producers: HashMap::new().into(),
+            s2c_transport: None.into(),
+            consumers: HashMap::new().into(),
+            socket: None.into(),
+            socket_initial_connect_watch_handle: Mutex::new(None),
         }
     }
 
-    #[allow(unused_must_use)] // don't care about unused results
-    pub async fn cleanup(&self) {
-        if let Some(watchdog) = self.socket_watchdog_handle.lock().unwrap().take() {
-            // we connected successfully, so stop the watchdog now
-            watchdog.abort();
+    pub fn cleanup(&self) {
+        if let Some(handle) = self
+            .socket_initial_connect_watch_handle
+            .lock()
+            .unwrap()
+            .take()
+        {
+            handle.abort();
         }
-        if let Some(session) = self.socket_session.write().unwrap().take() {
-            // we connected successfully, so close the session now
-            session.close(None).await;
-        }
+    }
+}
+
+impl Drop for VoiceClient {
+    fn drop(&mut self) {
+        info!("client[{}]: dropped", self.identity);
     }
 }
 
@@ -182,7 +185,7 @@ impl FromRequest for VoiceClientEx {
                 return Err(ErrorUnauthorized("access_denied"));
             }
 
-            if !trying_to_connect_to_ws && client.socket_session.read().unwrap().is_none() {
+            if !trying_to_connect_to_ws && client.socket.read().unwrap().is_none() {
                 warn!(
                     "no socket session for {:?}, denying access to {}",
                     client.identity,

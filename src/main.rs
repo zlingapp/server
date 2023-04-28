@@ -14,6 +14,7 @@ mod util;
 mod voice;
 mod guilds;
 mod channels;
+mod realtime;
 
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
 pub type DB = Data<Pool<Postgres>>;
