@@ -186,21 +186,6 @@ impl UserManager {
         }
         self.sessions.write().unwrap().remove(session).is_some()
     }
-
-    pub async fn is_user_in_guild(
-        &self,
-        user_id: &str,
-        guild_id: &str,
-    ) -> Result<bool, sqlx::Error> {
-        Ok(sqlx::query!(
-            "SELECT EXISTS (SELECT 1 FROM members WHERE guild_id = $1 AND user_id = $2) AS user_in_guild",
-            guild_id,
-            user_id
-        )
-        .fetch_one(self.db.as_ref())
-        .await?
-        .user_in_guild.unwrap())
-    }
 }
 
 pub struct SessionEx(SessionToken);

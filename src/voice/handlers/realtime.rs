@@ -19,7 +19,7 @@ use crate::{
 };
 
 #[get("/ws")] // WARNING: before changing this path, make sure to change it in the client extractor!!!
-pub async fn events_ws(
+pub async fn voice_events_ws(
     client: VoiceClientEx,
     clients: Data<VoiceClients>,
     channels: Data<VoiceChannels>,

@@ -6,7 +6,7 @@ use mediasoup::worker_manager::WorkerManager;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use voice::{VoiceChannels, VoiceClients};
 
-use crate::auth::user::UserManager;
+use crate::{auth::user::UserManager, realtime::consumer_manager::EventConsumerManager};
 
 mod auth;
 mod options;
@@ -54,6 +54,9 @@ async fn main() -> std::io::Result<()> {
     let voice_clients: Data<VoiceClients> = Data::new(Mutex::new(HashMap::new()));
     let voice_channels: Data<VoiceChannels> = Data::new(Mutex::new(HashMap::new()));
 
+    // pubsub
+    let event_manager = Data::new(EventConsumerManager::new());
+
     HttpServer::new(move || {
         // add logging middleware
         App::new()
@@ -68,6 +71,8 @@ async fn main() -> std::io::Result<()> {
             .service(auth::handlers::scope())
             .service(guilds::handlers::scope())
             .service(channels::handlers::scope())
+            .app_data(Data::clone(&event_manager))
+            .service(realtime::events::events_ws)
     })
     .workers(2)
     .bind("127.0.0.1:8080")?

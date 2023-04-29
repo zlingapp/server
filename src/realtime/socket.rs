@@ -7,7 +7,7 @@ use actix_rt::{task::JoinHandle, time::sleep};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_ws::{Message, MessageStream, Session};
 use futures::StreamExt;
-use log::info;
+use log::{info, warn};
 
 pub type Callback<T> = Box<dyn Fn(T) -> () + Send + Sync>;
 

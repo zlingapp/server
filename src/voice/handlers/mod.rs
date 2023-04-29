@@ -11,7 +11,7 @@ pub mod produce;
 pub use self::produce::handle_produce;
 
 pub mod realtime;
-pub use self::realtime::events_ws;
+pub use self::realtime::voice_events_ws;
 
 pub mod query;
 pub use self::query::query_channel;
@@ -24,7 +24,7 @@ pub fn scope() -> actix_web::Scope {
         .service(query_channel)
         .service(join_vc)
         .service(leave_vc)
-        .service(events_ws)
+        .service(voice_events_ws)
         .service(create_transport)
         .service(connect_transport)
         .service(handle_produce)
