@@ -8,7 +8,7 @@
 */
 
 use actix_web::{
-    error::{ErrorConflict, ErrorInternalServerError, ErrorUnauthorized},
+    error::{ErrorConflict, ErrorInternalServerError, ErrorUnauthorized, ErrorBadRequest},
     get, post,
     web::{self, Json, Query},
     HttpResponse,
@@ -176,7 +176,8 @@ pub async fn join_guild(
             INSERT INTO members (user_id, guild_id) 
             SELECT $1, $2
             FROM (SELECT 1) AS t
-            WHERE NOT EXISTS (SELECT 1 FROM members WHERE user_id = $1 AND guild_id = $2)
+            WHERE NOT EXISTS (SELECT 1 FROM members WHERE user_id = $1 AND guild_id = $2) 
+            AND EXISTS (SELECT 1 FROM guilds WHERE guilds.id = $2)
         "#,
         user.id,
         guild_query.id
@@ -193,7 +194,7 @@ pub async fn join_guild(
     .rows_affected();
 
     if rows_affected == 0 {
-        return Err(ErrorConflict("id_conflict"));
+        return Err(ErrorBadRequest("join_invalid"));
     }
 
     Ok(HttpResponse::Ok().body("success"))
