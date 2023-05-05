@@ -8,15 +8,14 @@ use log::{error, info, warn};
 use mediasoup::{
     prelude::{DtlsParameters, IceCandidate, IceParameters},
     transport::Transport,
-    webrtc_transport::WebRtcTransportRemoteParameters,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::voice::{client::VoiceClientEx};
 use crate::options::webrtc_transport_options;
+use crate::voice::{client::VoiceClientEx, transport::TransportType};
 
 /*
-   There are two handlers registered below for transports.
+   There are two handlers registered for transports.
    - POST /transports/create (defined in create_transport)
    - POST /transports/connect (defined in connect_transport)
 
@@ -25,22 +24,13 @@ use crate::options::webrtc_transport_options;
    the query string. This is because the process for creating a send and receive transport is the same.
 */
 
-/// This enum is used to specify the type of transport to create.
-/// It is used in the query string of the request.
-#[derive(Debug, Deserialize)]
-pub enum TransportType {
-    #[serde(rename = "send")]
-    Send,
-    #[serde(rename = "recv")]
-    Receive,
-}
 /// This struct is used to deserialize the query string of the request.
 /// It contains the type of transport to create.
 /// In the URL, it looks like ?type=send or ?type=recv
 #[derive(Debug, Deserialize)]
 pub struct TransportTypeQuery {
     #[serde(rename = "type")]
-    transport_type: TransportType,
+    pub transport_type: TransportType,
 }
 
 /// This is what the server will reply with when a transport is created.
@@ -80,7 +70,7 @@ pub type CreateTransportResponse = Result<Json<CreateTransportReply>, CreateTran
 ///
 /// eg. /transport/create?type=send
 /// eg. /transport/create?type=recv
-#[post("/transport/create")]
+#[post("/voice/transport/create")]
 pub async fn create_transport(
     client: VoiceClientEx,
     query: Query<TransportTypeQuery>,
@@ -136,86 +126,4 @@ pub async fn create_transport(
     *transport_to_assign.write().unwrap() = Some(transport);
 
     Ok(Json(reply))
-}
-
-/// This is the request body for the connect transport handler.
-/// It contains the DTLS parameters of the remote peer, which are needed to connect the transport.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ConnectTransportRequest {
-    dtls_parameters: DtlsParameters,
-}
-
-/// If things go wrong when connecting a transport, this enum will be used to specify the error.
-#[derive(Debug, Display, Error)]
-#[display(rename_all = "snake_case")]
-pub enum ConnectTransportError {
-    TransportNotCreated,
-    TransportConnectFailed,
-}
-impl ResponseError for ConnectTransportError {
-    fn status_code(&self) -> actix_web::http::StatusCode {
-        use actix_web::http::StatusCode;
-        use ConnectTransportError::*;
-        match self {
-            TransportNotCreated => StatusCode::BAD_REQUEST,
-            TransportConnectFailed => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-}
-
-pub type ConnectTransportResponse = Result<&'static str, ConnectTransportError>;
-
-/// POST /transport/connect
-///
-///    Connects a transport to the remote peer. The type of transport is specified in the query string.
-///
-/// eg. /transport/connect?type=send
-/// eg. /transport/connect?type=recv
-///
-#[post("/transport/connect")]
-pub async fn connect_transport(
-    client: VoiceClientEx,
-    request: Json<ConnectTransportRequest>,
-    query: Query<TransportTypeQuery>,
-) -> ConnectTransportResponse {
-    use ConnectTransportError::*;
-    use TransportType::*;
-
-    let transport_to_connect = match query.transport_type {
-        Send => &client.c2s_transport,
-        Receive => &client.s2c_transport,
-    };
-
-    // read lock here is held across an await? too bad!
-    // no but in all seriousness, this is probably not a good idea...
-    transport_to_connect
-        .read()
-        .unwrap()
-        .as_ref()
-        .ok_or_else(|| {
-            warn!(
-                "client[{:?}]: tried to connect transport {:?} creating it",
-                client.identity, query.transport_type
-            );
-            TransportNotCreated
-        })?
-        .connect(WebRtcTransportRemoteParameters {
-            dtls_parameters: request.dtls_parameters.clone(),
-        })
-        .await
-        .map_err(|e| {
-            error!(
-                "client[{:?}]: {:?} connect failed: {}",
-                client.identity, query.transport_type, e
-            );
-            TransportConnectFailed
-        })?;
-
-    info!(
-        "client[{:?}]: {:?} transport connected",
-        client.identity, query.transport_type
-    );
-
-    Ok("connected")
 }

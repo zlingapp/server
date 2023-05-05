@@ -1,23 +1,28 @@
 use std::{collections::HashMap, sync::Mutex};
 
 use actix_web::{web::Data, App, HttpServer};
+use db::Database;
 use log::{error, info};
 use mediasoup::worker_manager::WorkerManager;
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use sqlx::postgres::PgPoolOptions;
 use voice::{VoiceChannels, VoiceClients};
 
-use crate::{auth::user::UserManager, realtime::consumer_manager::EventConsumerManager};
+use crate::{
+    auth::SessionManager, db::DB, realtime::pubsub::consumer_manager::EventConsumerManager,
+};
 
 mod auth;
+mod channels;
+mod crypto;
+mod db;
+mod guilds;
+mod messaging;
 mod options;
+mod realtime;
 mod util;
 mod voice;
-mod guilds;
-mod channels;
-mod realtime;
 
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
-pub type DB = Data<Pool<Postgres>>;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -31,6 +36,7 @@ async fn main() -> std::io::Result<()> {
     let db_url = options::db_conn_string();
 
     // database
+    info!("Connecting to database...");
     let pool = PgPoolOptions::new().max_connections(5).connect(&db_url);
 
     let pool = match pool.await {
@@ -44,10 +50,10 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
-    let pool: DB = Data::new(pool);
+    let pool: DB = Data::new(Database::with_pool(pool));
 
     // auth related
-    let user_manager = Data::new(UserManager::new(Data::clone(&pool)));
+    let session_manager = Data::new(SessionManager::new(Data::clone(&pool)));
 
     // voice chat related
     let voice_worker_manager = Data::new(WorkerManager::new());
@@ -60,19 +66,27 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         // add logging middleware
         App::new()
+            // logging
             .wrap(actix_web::middleware::Logger::new("%{r}a %r -> %s in %Dms").log_target("http"))
+            // database
             .app_data(Data::clone(&pool))
-            // setup voice api
+            // authentication
+            .app_data(Data::clone(&session_manager))
+            .configure(auth::routes::configure_app)
+            // voice chat
             .app_data(Data::clone(&voice_worker_manager))
             .app_data(Data::clone(&voice_clients))
             .app_data(Data::clone(&voice_channels))
-            .service(voice::handlers::scope())
-            .app_data(Data::clone(&user_manager))
-            .service(auth::handlers::scope())
-            .service(guilds::handlers::scope())
-            .service(channels::handlers::scope())
+            .configure(voice::routes::configure_app)
+            // guilds
+            .configure(guilds::routes::configure_app)
+            // channels
+            .configure(channels::routes::configure_app)
+            // pubsub
             .app_data(Data::clone(&event_manager))
-            .service(realtime::events::events_ws)
+            .service(realtime::pubsub::events::events_ws)
+            // messaging
+            .configure(messaging::routes::configure_app)
     })
     .workers(2)
     .bind("127.0.0.1:8080")?

@@ -49,7 +49,7 @@ pub struct ProduceReply {
 
 pub type ProduceResponse = Result<Json<ProduceReply>, ProduceError>;
 
-#[post("/produce")]
+#[post("/voice/produce")]
 pub async fn handle_produce(client: VoiceClientEx, request: Json<ProduceRequest>) -> ProduceResponse {
     if client.c2s_transport.read().unwrap().is_none() {
         return Err(ProduceError::TransportNotCreated);

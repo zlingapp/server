@@ -50,7 +50,7 @@ pub struct ConsumeReply {
 
 pub type ConsumeResponse = Result<Json<ConsumeReply>, ConsumeError>;
 
-#[post("/consume")]
+#[post("/voice/consume")]
 pub async fn handle_consume(client: VoiceClientEx, request: Json<ConsumeRequest>) -> ConsumeResponse {
     use ConsumeError::*;
 

@@ -4,7 +4,6 @@ use actix_rt::time::sleep;
 use actix_web::{
     error, get,
     web::{Data, Json, Query},
-    Error, HttpResponse,
 };
 use derive_more::{Display, Error};
 
@@ -14,11 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::user::UserEx,
-    voice::{
-        channel::create_channel,
-        client::{VoiceClient, VoiceClientEx},
-        VoiceChannels, VoiceClients,
-    },
+    voice::{channel::create_channel, client::VoiceClient, VoiceChannels, VoiceClients},
 };
 
 #[derive(Deserialize)]
@@ -47,7 +42,7 @@ impl error::ResponseError for JoinVcError {
 
 pub type JoinVcResponse = Result<Json<JoinVcReply>, JoinVcError>;
 
-#[get("/join")]
+#[get("/voice/join")]
 pub async fn join_vc(
     _: UserEx, // ensure valid session
     clients: Data<VoiceClients>,
@@ -126,17 +121,4 @@ pub async fn join_vc(
         .insert(client.identity.clone(), client);
 
     Ok(Json(reply))
-}
-
-#[get("/leave")]
-pub async fn leave_vc(
-    client: VoiceClientEx,
-    clients: Data<VoiceClients>,
-    channels: Data<VoiceChannels>,
-) -> Result<HttpResponse, Error> {
-    client
-        .channel
-        .disconnect_client(&client, &clients, &channels)
-        .await;
-    Ok(HttpResponse::Ok().finish())
 }

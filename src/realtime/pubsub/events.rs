@@ -26,21 +26,17 @@ use actix_web::{
 };
 
 use crate::{
-    auth::user::{UserEx, User},
+    auth::user::UserEx,
     realtime::{
-        consumer::EventConsumer,
-        consumer_manager::EventConsumerManager,
-        topic::{Topic, TopicType},
-    }, DB,
+        pubsub::{consumer::EventConsumer, consumer_manager::EventConsumerManager},
+        socket::Socket,
+    },
 };
-
-use super::socket::Socket;
 
 #[get("/events/ws")]
 pub async fn events_ws(
     user: UserEx,
     ecm: Data<EventConsumerManager>,
-    db: DB,
     req: HttpRequest,
     body: Payload,
 ) -> Result<HttpResponse, Error> {
@@ -50,7 +46,6 @@ pub async fn events_ws(
     {
         let ecm = ecm.clone();
         let user = user.clone();
-        let db = db.clone();
 
         on_message_handler = Box::new(move |msg: String| {
             // message can contain keys `sub`, `unsub`, and `message`

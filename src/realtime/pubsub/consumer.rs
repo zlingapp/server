@@ -3,9 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::auth::user::UserId;
-
-use super::socket::Socket;
+use crate::{auth::user::UserId, realtime::socket::Socket};
 
 #[derive(Clone)]
 pub struct EventConsumer {

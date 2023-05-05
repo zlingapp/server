@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use derive_more::Display;
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]

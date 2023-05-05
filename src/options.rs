@@ -49,6 +49,7 @@ lazy_static! {
     static ref DB_USER: String = var("DB_USER", "chat_backend");
     static ref DB_PASSWORD: String = var("DB_PASSWORD", "changeme");
     static ref DB_NAME: String = var("DB_NAME", "chat_backend");
+    static ref DB_POOL_MAX_CONNS: u32 = var("DB_POOL_MAX_CONNS", "5");
 }
 
 pub fn media_codecs() -> Vec<RtpCodecCapability> {
@@ -138,6 +139,7 @@ pub fn initialize_all() {
     lazy_static::initialize(&DB_USER);
     lazy_static::initialize(&DB_PASSWORD);
     lazy_static::initialize(&DB_NAME);
+    lazy_static::initialize(&DB_POOL_MAX_CONNS);
 }
 
 pub fn print_all() {
@@ -147,5 +149,5 @@ pub fn print_all() {
     info!("config: UDP Enabled: {}", *ENABLE_UDP);
     info!("config: TCP Enabled: {}", *ENABLE_TCP);
     info!("config: Preferred: {}", if *PREFER_UDP { "UDP" } else { "TCP" });
-    info!("config: Database: {} at {}:{}", *DB_NAME, *DB_HOST, *DB_PORT);
+    info!("config: Database: {} at {}:{} ({} max connections)", *DB_NAME, *DB_HOST, *DB_PORT, *DB_POOL_MAX_CONNS);
 }

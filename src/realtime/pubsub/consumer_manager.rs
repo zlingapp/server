@@ -2,10 +2,7 @@ use futures::future::join_all;
 use serde_json::{json, Value};
 use sqlx::types::chrono::NaiveDateTime;
 
-use crate::{
-    auth::{perms::can_user_send_message_in, user::User},
-    DB,
-};
+use crate::auth::user::User;
 
 use super::{
     consumer::EventConsumer,
@@ -67,7 +64,6 @@ impl EventConsumerManager {
 
     pub async fn notify_of_new_message(
         &self,
-        db: &DB,
         user: &User,
         channel_id: &str,
         message_id: &str,

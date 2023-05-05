@@ -7,7 +7,7 @@ use actix_rt::{task::JoinHandle, time::sleep};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_ws::{Message, MessageStream, Session};
 use futures::StreamExt;
-use log::{info, warn};
+use log::{info, debug};
 
 pub type Callback<T> = Box<dyn Fn(T) -> () + Send + Sync>;
 
@@ -169,7 +169,6 @@ impl Socket {
 
 impl Drop for Socket {
     fn drop(&mut self) {
-        info!("socket dropped");
         if let Some(watchdog) = self.watchdog_handle.lock().unwrap().take() {
             // we connected successfully, so stop the watchdog now
             watchdog.abort();

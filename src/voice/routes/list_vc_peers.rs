@@ -16,8 +16,8 @@ pub struct ChannelMemberInfo {
 pub enum QueryChannelError {}
 impl actix_web::error::ResponseError for QueryChannelError {}
 
-#[get("/peers")]
-pub async fn query_channel(
+#[get("/voice/peers")]
+pub async fn list_vc_peers(
     client: VoiceClientEx,
 ) -> Result<Json<Vec<ChannelMemberInfo>>, QueryChannelError> {
     let reply;
