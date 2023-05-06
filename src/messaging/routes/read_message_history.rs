@@ -27,7 +27,7 @@ async fn read_message_history(
     let (guild_id, channel_id) = path.into_inner();
 
     let can_read = db
-        .can_user_read_message_history_from(&guild_id, &token.id, &channel_id)
+        .can_user_read_message_history_from(&guild_id, &token.user_id, &channel_id)
         .await
         .unwrap();
 

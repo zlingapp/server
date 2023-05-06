@@ -18,7 +18,7 @@ pub async fn delete_guild(
             DELETE FROM guilds WHERE id = $1 AND owner = $2
         "#,
         req.guild_id,
-        token.id
+        token.user_id
     )
     .execute(&db.pool)
     .await

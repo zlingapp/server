@@ -58,7 +58,7 @@ impl FromRequest for UserEx {
             let user = req
                 .app_data::<DB>()
                 .unwrap()
-                .get_user_by_id(&token.id)
+                .get_user_by_id(&token.user_id)
                 .await
                 .map_err(|e| {
                     log::error!("failed to get user from db: {}", e);

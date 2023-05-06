@@ -18,7 +18,7 @@ pub async fn join_guild(
             WHERE NOT EXISTS (SELECT 1 FROM members WHERE user_id = $1 AND guild_id = $2) 
             AND EXISTS (SELECT 1 FROM guilds WHERE guilds.id = $2)
         "#,
-        token.id,
+        token.user_id,
         req.guild_id
     )
     .execute(&db.pool)
@@ -26,7 +26,7 @@ pub async fn join_guild(
     .map_err(|e| {
         warn!(
             "user {} failed to join guild {}: {}",
-            token.id, req.guild_id, e
+            token.user_id, req.guild_id, e
         );
         ErrorInternalServerError("failed")
     })?

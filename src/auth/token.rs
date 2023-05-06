@@ -49,13 +49,13 @@ lazy_static! {
 /// ```
 #[derive(Debug, PartialEq, Eq)]
 pub struct Token {
-    pub id: UserId,
+    pub user_id: UserId,
     pub expires: OffsetDateTime, // utc
 }
 
 impl Token {
     pub fn with_expiry(user_id: String, expires: OffsetDateTime) -> Self {
-        Self { id: user_id, expires }
+        Self { user_id, expires }
     }
 
     pub fn new(user_id: String) -> Self {
@@ -77,7 +77,7 @@ impl ToString for Token {
         let expiry: [u8; 4] = (self.expires.unix_timestamp() as u32).to_be_bytes();
         let expiry = base64_url::encode(&expiry);
 
-        let payload = format!("{}.{}", self.id, expiry);
+        let payload = format!("{}.{}", self.user_id, expiry);
 
         let signature = crypto::sign(&*TOKEN_SIGNING_KEY, payload.as_bytes());
         let signature = base64_url::encode(&signature);

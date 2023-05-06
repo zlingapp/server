@@ -43,7 +43,7 @@ pub async fn create_guild(
         "#,
         guild_id,
         req.name,
-        token.id
+        token.user_id
     )
     .execute(&mut tx)
     .await
@@ -67,7 +67,7 @@ pub async fn create_guild(
             FROM (SELECT 1) AS t
             WHERE NOT EXISTS (SELECT 1 FROM members WHERE user_id = $1 AND guild_id = $2)
         "#,
-        token.id,
+        token.user_id,
         guild_id
     )
     .execute(&mut tx)
@@ -75,7 +75,7 @@ pub async fn create_guild(
     .map_err(|e| {
         warn!(
             "user {} failed to join guild as OWNER {}: {}",
-            token.id, guild_id, e
+            token.user_id, guild_id, e
         );
         ErrorInternalServerError("failed")
     })?

@@ -95,13 +95,15 @@ impl FromRequest for VoiceClientEx {
         let req = req.clone();
 
         Box::pin(async move {
-            // validate session
-            TokenEx::from_request(&req, &mut actix_web::dev::Payload::None).await?;
-
-            // todo: a bunch of logic & checks here to make sure the user is allowed to connect to the channel
-            //       use the return value of the above line to get the user
-
             let trying_to_connect_to_ws = req.path() == "/voice/ws" && req.method() == "GET";
+            
+            if !trying_to_connect_to_ws {
+                // validate session
+                TokenEx::from_request(&req, &mut actix_web::dev::Payload::None).await?;
+    
+                // todo: a bunch of logic & checks here to make sure the user is allowed to connect to the channel
+                //       use the return value of the above line to get the user
+            }
 
             let rtc_identity;
             let rtc_token;

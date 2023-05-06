@@ -23,25 +23,38 @@ use std::sync::Arc;
 
 use actix_web::{
     get,
-    web::{Data, Payload},
-    Error, HttpRequest, HttpResponse,
+    web::{Data, Payload, Query},
+    Error, HttpRequest, HttpResponse, error::ErrorUnauthorized,
 };
+use serde::Deserialize;
 
 use crate::{
-    auth::token::TokenEx,
+    auth::token::{Token, TokenEx},
     realtime::{
         pubsub::{consumer::EventConsumer, consumer_manager::EventConsumerManager},
         socket::Socket,
     },
 };
 
+#[derive(Deserialize)]
+pub struct TokenInQuery {
+    auth: String,
+}
+
 #[get("/events/ws")]
 pub async fn events_ws(
-    token: TokenEx,
     ecm: Data<EventConsumerManager>,
     req: HttpRequest,
+    query: Query<TokenInQuery>,
     body: Payload,
 ) -> Result<HttpResponse, Error> {
+    let token = match query.auth.parse::<Token>() {
+        Ok(token) => token,
+        Err(_) => {
+            return Err(ErrorUnauthorized("access_denied"));
+        }
+    };
+
     let on_message_handler: Box<dyn Fn(String) + Send + Sync + 'static>;
     let on_close_handler;
 
@@ -76,7 +89,7 @@ pub async fn events_ws(
                 for v in array {
                     if let Some(Ok(topic)) = v.as_str().map(|s| s.parse()) {
                         // try to subscribe
-                        ecm.subscribe(&token.id, topic).unwrap_or(());
+                        ecm.subscribe(&token.user_id, topic).unwrap_or(());
                     }
                 }
             }
@@ -85,7 +98,7 @@ pub async fn events_ws(
                 array.iter().for_each(|v| {
                     if let Some(Ok(topic)) = v.as_str().map(|s| s.parse()) {
                         // try to unsubscribe
-                        ecm.unsubscribe(&token.id, &topic).unwrap_or(());
+                        ecm.unsubscribe(&token.user_id, &topic).unwrap_or(());
                     }
                 })
             }
@@ -93,7 +106,7 @@ pub async fn events_ws(
     }
 
     {
-        let user_id = token.id.clone();
+        let user_id = token.user_id.clone();
         let ecm = ecm.clone();
         on_close_handler = Box::new(move |_| {
             ecm.remove_consumer(&user_id);
@@ -109,7 +122,7 @@ pub async fn events_ws(
         Some(on_close_handler),
     )?;
 
-    ecm.add_consumer(EventConsumer::new(token.id.clone(), socket));
+    ecm.add_consumer(EventConsumer::new(token.user_id.clone(), socket));
 
     Ok(response)
 }

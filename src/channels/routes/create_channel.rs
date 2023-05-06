@@ -39,12 +39,12 @@ async fn create_channel(
     path: GuildPath,
 ) -> Result<Json<CreateChannelResponse>, Error> {
     let user_in_guild = db
-        .is_user_in_guild(&token.id, &path.guild_id)
+        .is_user_in_guild(&token.user_id, &path.guild_id)
         .await
         .map_err(|e| {
             warn!(
                 "failed to check if user {} is in guild {}: {}",
-                token.id, path.guild_id, e
+                token.user_id, path.guild_id, e
             );
             ErrorInternalServerError("")
         })?;

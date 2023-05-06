@@ -21,12 +21,12 @@ pub async fn list_joined_guilds(
             SELECT members.guild_id AS "id", guilds.name FROM members, guilds 
             WHERE members.user_id = $1 AND members.guild_id = guilds.id
         "#,
-        token.id
+        token.user_id
     )
     .fetch_all(&db.pool)
     .await
     .map_err(|e| {
-        warn!("failed to list guilds for user {}: {}", token.id, e);
+        warn!("failed to list guilds for user {}: {}", token.user_id, e);
         ErrorInternalServerError("failed")
     })?;
 
