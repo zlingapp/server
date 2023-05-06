@@ -1,12 +1,16 @@
-use actix_web::{delete, error::{ErrorInternalServerError, ErrorUnauthorized}, HttpResponse};
+use actix_web::{
+    delete,
+    error::{ErrorInternalServerError, ErrorUnauthorized},
+    HttpResponse,
+};
 use log::warn;
 
-use crate::{db::DB, auth::user::UserEx, guilds::routes::GuildPath};
+use crate::{auth::token::TokenEx, db::DB, guilds::routes::GuildPath};
 
 #[delete("/guilds/{guild_id}")]
 pub async fn delete_guild(
     db: DB,
-    user: UserEx,
+    token: TokenEx,
     req: GuildPath,
 ) -> Result<HttpResponse, actix_web::Error> {
     let rows_affected = sqlx::query!(
@@ -14,7 +18,7 @@ pub async fn delete_guild(
             DELETE FROM guilds WHERE id = $1 AND owner = $2
         "#,
         req.guild_id,
-        user.id
+        token.id
     )
     .execute(&db.pool)
     .await

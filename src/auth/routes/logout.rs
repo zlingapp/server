@@ -1,24 +1,10 @@
-use actix_web::{web::Data, get, HttpResponse, Error};
-use time::OffsetDateTime;
+use actix_web::{get, Error, HttpResponse};
 
-use crate::auth::{user::UserEx, routes::build_session_cookie, SessionManager, SessionEx};
+use crate::auth::token::TokenEx;
 
 #[get("/auth/logout")]
-pub async fn logout(
-    sm: Data<SessionManager>,
-    user: UserEx,
-    session: SessionEx,
-) -> Result<HttpResponse, Error> {
-    if !sm.erase_session(&user, &session) {
-        // either the session was already deleted or the user is trying to delete someone else's session
-        return Ok(
-            HttpResponse::BadRequest().body("session_delete_failed")
-        )
-    };
-
-    let death_cookie = build_session_cookie("NO_SESSION_DELETE_ME")
-        .expires(OffsetDateTime::from_unix_timestamp(0).unwrap())
-        .finish();
-
-    Ok(HttpResponse::Ok().cookie(death_cookie).body("success"))
+pub async fn logout(_token: TokenEx) -> Result<HttpResponse, Error> {
+    // todo: implement refresh token system
+    // right now there is no way to invalidate a token!!! THIS IS BAD!!!
+    Ok(HttpResponse::Ok().body("success"))
 }

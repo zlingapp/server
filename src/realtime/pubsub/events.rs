@@ -19,6 +19,8 @@ Message:
 
  */
 
+use std::sync::Arc;
+
 use actix_web::{
     get,
     web::{Data, Payload},
@@ -26,7 +28,7 @@ use actix_web::{
 };
 
 use crate::{
-    auth::user::UserEx,
+    auth::token::TokenEx,
     realtime::{
         pubsub::{consumer::EventConsumer, consumer_manager::EventConsumerManager},
         socket::Socket,
@@ -35,7 +37,7 @@ use crate::{
 
 #[get("/events/ws")]
 pub async fn events_ws(
-    user: UserEx,
+    token: TokenEx,
     ecm: Data<EventConsumerManager>,
     req: HttpRequest,
     body: Payload,
@@ -43,9 +45,11 @@ pub async fn events_ws(
     let on_message_handler: Box<dyn Fn(String) + Send + Sync + 'static>;
     let on_close_handler;
 
+    let token = Arc::new(token);
+
     {
         let ecm = ecm.clone();
-        let user = user.clone();
+        let token = token.clone();
 
         on_message_handler = Box::new(move |msg: String| {
             // message can contain keys `sub`, `unsub`, and `message`
@@ -72,7 +76,7 @@ pub async fn events_ws(
                 for v in array {
                     if let Some(Ok(topic)) = v.as_str().map(|s| s.parse()) {
                         // try to subscribe
-                        ecm.subscribe(&user.id, topic).unwrap_or(());
+                        ecm.subscribe(&token.id, topic).unwrap_or(());
                     }
                 }
             }
@@ -81,7 +85,7 @@ pub async fn events_ws(
                 array.iter().for_each(|v| {
                     if let Some(Ok(topic)) = v.as_str().map(|s| s.parse()) {
                         // try to unsubscribe
-                        ecm.unsubscribe(&user.id, &topic).unwrap_or(());
+                        ecm.unsubscribe(&token.id, &topic).unwrap_or(());
                     }
                 })
             }
@@ -89,7 +93,7 @@ pub async fn events_ws(
     }
 
     {
-        let user_id = user.id.clone();
+        let user_id = token.id.clone();
         let ecm = ecm.clone();
         on_close_handler = Box::new(move |_| {
             ecm.remove_consumer(&user_id);
@@ -105,7 +109,7 @@ pub async fn events_ws(
         Some(on_close_handler),
     )?;
 
-    ecm.add_consumer(EventConsumer::new(user.id.clone(), socket));
+    ecm.add_consumer(EventConsumer::new(token.id.clone(), socket));
 
     Ok(response)
 }

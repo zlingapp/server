@@ -8,7 +8,7 @@ use log::warn;
 use serde::Serialize;
 
 use crate::{
-    auth::user::UserEx, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath,
+    auth::{token::TokenEx}, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath,
 };
 
 #[derive(Serialize)]
@@ -23,16 +23,16 @@ pub type ListChannelsResponse = Vec<ChannelInfo>;
 #[get("/guilds/{guild_id}/channels")]
 async fn list_guild_channels(
     db: DB,
-    user: UserEx,
+    token: TokenEx,
     path: GuildPath,
 ) -> Result<Json<ListChannelsResponse>, Error> {
     let user_in_guild = db
-        .is_user_in_guild(&user.id, &path.guild_id)
+        .is_user_in_guild(&token.id, &path.guild_id)
         .await
         .map_err(|e| {
             warn!(
                 "failed to check if user {} is in guild {}: {}",
-                user.id, path.guild_id, e
+                token.id, path.guild_id, e
             );
             ErrorInternalServerError("")
         })?;

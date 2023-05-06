@@ -4,5 +4,5 @@ use crate::auth::user::{UserEx, User};
 
 #[get("/auth/whoami")]
 pub async fn whoami(user: UserEx) -> Result<Json<User>, Error> {
-    Ok(Json(user.as_ref().clone()))
+    Ok(Json(user.into()))
 }

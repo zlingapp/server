@@ -8,7 +8,7 @@ use sqlx::postgres::PgPoolOptions;
 use voice::{VoiceChannels, VoiceClients};
 
 use crate::{
-    auth::SessionManager, db::DB, realtime::pubsub::consumer_manager::EventConsumerManager,
+    db::DB, realtime::pubsub::consumer_manager::EventConsumerManager,
 };
 
 mod auth;
@@ -52,9 +52,6 @@ async fn main() -> std::io::Result<()> {
 
     let pool: DB = Data::new(Database::with_pool(pool));
 
-    // auth related
-    let session_manager = Data::new(SessionManager::new(Data::clone(&pool)));
-
     // voice chat related
     let voice_worker_manager = Data::new(WorkerManager::new());
     let voice_clients: Data<VoiceClients> = Data::new(Mutex::new(HashMap::new()));
@@ -71,7 +68,6 @@ async fn main() -> std::io::Result<()> {
             // database
             .app_data(Data::clone(&pool))
             // authentication
-            .app_data(Data::clone(&session_manager))
             .configure(auth::routes::configure_app)
             // voice chat
             .app_data(Data::clone(&voice_worker_manager))

@@ -1,19 +1,16 @@
-use std::{
-    pin::Pin,
-    sync::{Arc},
-};
+use std::pin::Pin;
 
 use std::ops::Deref;
 
-use actix_web::{web::Data, FromRequest};
+use actix_web::error::ErrorInternalServerError;
+use actix_web::FromRequest;
 
 use futures::Future;
 use serde::Serialize;
 
-use crate::auth::{SessionEx, SessionManager};
+use crate::{auth::token::TokenEx, db::DB};
 
 pub type UserId = String;
-pub type SessionToken = String;
 
 /// struct containing user info
 /// the email field shouldn't be known by users other than this user for privacy reasons
@@ -29,13 +26,19 @@ pub struct User {
     pub email: String,
 }
 
-pub struct UserEx(pub Arc<User>);
+pub struct UserEx(User);
 
 impl Deref for UserEx {
-    type Target = Arc<User>;
+    type Target = User;
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl Into<User> for UserEx {
+    fn into(self) -> User {
+        self.0
     }
 }
 
@@ -50,12 +53,17 @@ impl FromRequest for UserEx {
         let req = req.clone();
         Box::pin(async move {
             use actix_web::error::ErrorUnauthorized;
-            let session = SessionEx::from_request(&req, &mut actix_web::dev::Payload::None).await?;
+            let token = TokenEx::from_request(&req, &mut actix_web::dev::Payload::None).await?;
 
             let user = req
-                .app_data::<Data<SessionManager>>()
+                .app_data::<DB>()
                 .unwrap()
-                .get_user_by_session(&session)
+                .get_user_by_id(&token.id)
+                .await
+                .map_err(|e| {
+                    log::error!("failed to get user from db: {}", e);
+                    ErrorInternalServerError("")
+                })?
                 .map(|u| UserEx(u));
 
             user.ok_or(ErrorUnauthorized("access_denied"))

@@ -1,9 +1,14 @@
-use actix_web::{get, HttpResponse, Error, error::{ErrorUnauthorized, ErrorInternalServerError, ErrorBadRequest}, web::{Query, Path}};
+use actix_web::{
+    error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized},
+    get,
+    web::{Path, Query},
+    Error, HttpResponse,
+};
 use log::warn;
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
-use crate::{db::DB, auth::user::UserEx};
+use crate::{auth::token::TokenEx, db::DB};
 
 #[derive(Deserialize)]
 pub struct MessageHistoryQuery {
@@ -15,13 +20,14 @@ const MAX_MESSAGE_LIMIT: i64 = 50;
 #[get("/guilds/{guild_id}/channels/{channel_id}/messages")]
 async fn read_message_history(
     db: DB,
-    user: UserEx,
+    token: TokenEx,
     path: Path<(String, String)>,
     req: Query<MessageHistoryQuery>,
 ) -> Result<HttpResponse, Error> {
     let (guild_id, channel_id) = path.into_inner();
 
-    let can_read = db.can_user_read_message_history_from(&guild_id, &user.id, &channel_id)
+    let can_read = db
+        .can_user_read_message_history_from(&guild_id, &token.id, &channel_id)
         .await
         .unwrap();
 
@@ -32,11 +38,10 @@ async fn read_message_history(
     let limit = req.limit.unwrap_or(50);
 
     if limit > MAX_MESSAGE_LIMIT {
-        return Err(
-            ErrorBadRequest(
-                format!("max_limit_exceeds_{}", MAX_MESSAGE_LIMIT)
-            )
-        );
+        return Err(ErrorBadRequest(format!(
+            "max_limit_exceeds_{}",
+            MAX_MESSAGE_LIMIT
+        )));
     }
 
     let messages = sqlx::query!(

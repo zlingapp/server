@@ -16,6 +16,22 @@ impl Database {
         Self { pool }
     }
 
+    pub async fn get_user_by_id(&self, id: &str) -> Result<Option<User>, sqlx::Error> {
+        let user = sqlx::query_as!(
+            User,
+            r#"
+                SELECT id, name, email, avatar
+                FROM users
+                WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
     pub async fn register_user(&self, user: &User, password: &str) -> Result<bool, sqlx::Error> {
         let rows_affected = query!(
             r#"

@@ -1,5 +1,5 @@
 use actix_web::{
-    error::{ErrorInternalServerError, ErrorUnauthorized, ErrorBadRequest},
+    error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized},
     post,
     web::Json,
     Error,
@@ -10,7 +10,9 @@ use nanoid::nanoid;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{auth::user::UserEx, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath};
+use crate::{
+    auth::token::TokenEx, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath,
+};
 
 #[derive(Deserialize)]
 pub struct CreateChannelRequest {
@@ -23,7 +25,7 @@ pub struct CreateChannelResponse {
     id: String,
 }
 
-lazy_static!{
+lazy_static! {
     // TODO: consider that this app becomes unusable for literally anyone who does not speak english
     // rework this regex to support other languages
     static ref CHANNEL_NAME_REGEX: Regex = Regex::new(r"^[\x20-\x7E]{1,16}$").unwrap();
@@ -32,17 +34,17 @@ lazy_static!{
 #[post("/guilds/{guild_id}/channels")]
 async fn create_channel(
     db: DB,
-    user: UserEx,
+    token: TokenEx,
     req: Json<CreateChannelRequest>,
-    path: GuildPath
+    path: GuildPath,
 ) -> Result<Json<CreateChannelResponse>, Error> {
     let user_in_guild = db
-        .is_user_in_guild(&user.id, &path.guild_id)
+        .is_user_in_guild(&token.id, &path.guild_id)
         .await
         .map_err(|e| {
             warn!(
                 "failed to check if user {} is in guild {}: {}",
-                user.id, path.guild_id, e
+                token.id, path.guild_id, e
             );
             ErrorInternalServerError("")
         })?;
@@ -52,7 +54,7 @@ async fn create_channel(
     }
 
     if req.name.trim().is_empty() || !CHANNEL_NAME_REGEX.is_match(&req.name) {
-        return Err(ErrorBadRequest("invalid_name"))
+        return Err(ErrorBadRequest("invalid_name"));
     }
 
     let channel_id = sqlx::query!(

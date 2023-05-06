@@ -50,6 +50,27 @@ lazy_static! {
     static ref DB_PASSWORD: String = var("DB_PASSWORD", "changeme");
     static ref DB_NAME: String = var("DB_NAME", "chat_backend");
     static ref DB_POOL_MAX_CONNS: u32 = var("DB_POOL_MAX_CONNS", "5");
+
+    pub static ref TOKEN_SIGNING_KEY: [u8; 32] = {
+        let tsk: String = var("TOKEN_SIGNING_KEY", "");
+        
+        if tsk.is_empty() {
+            info!("Generating new token signing key... (provide one with TOKEN_SIGNING_KEY)");
+            let generated = crate::crypto::generate_token_sig_key();
+
+            if var::<String>("PRINT_GENERATED_TOKEN_SIGNING_KEY", "false") == "true" {
+                info!("Token signing key: {}", hex::encode(&generated));
+            }
+
+            generated
+        } else {
+            let key = hex::decode(tsk).unwrap();
+            if key.len() != 32 {
+                panic!("Invalid token signing key length, must be 32 bytes");
+            }
+            key.try_into().unwrap()
+        }
+    };
 }
 
 pub fn media_codecs() -> Vec<RtpCodecCapability> {
@@ -140,6 +161,7 @@ pub fn initialize_all() {
     lazy_static::initialize(&DB_PASSWORD);
     lazy_static::initialize(&DB_NAME);
     lazy_static::initialize(&DB_POOL_MAX_CONNS);
+    lazy_static::initialize(&TOKEN_SIGNING_KEY);
 }
 
 pub fn print_all() {
