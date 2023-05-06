@@ -54,4 +54,12 @@ CREATE TABLE roles (
     created_by  text        NOT NULL,
     permissions json        NOT NULL DEFAULT '{}'::json
 );
+CREATE TABLE tokens (
+    token_id    text        NOT NULL,
+    nonce       text        NOT NULL,
+    user_id     text        NOT NULL,
+    expires_at  timestamp   NOT NULL,
+    user_agent  text        NOT NULL DEFAULT 'Unknown',
+    PRIMARY KEY (nonce, user_id)
+);
 COMMIT;

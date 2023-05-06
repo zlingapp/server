@@ -5,5 +5,6 @@ DROP TABLE guilds;
 DROP TABLE users;
 DROP TABLE messages;
 DROP TABLE roles;
-DROP TABLe members;
+DROP TABLE members;
+DROP TABLE tokens;
 COMMIT;

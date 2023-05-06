@@ -7,7 +7,7 @@ use log::warn;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 
-use crate::{auth::token::TokenEx, db::DB};
+use crate::{auth::access_token::AccessToken, db::DB};
 
 #[derive(Deserialize)]
 pub struct CreateGuildQuery {
@@ -22,7 +22,7 @@ pub struct CreateGuildResponse {
 #[post("/guilds")]
 pub async fn create_guild(
     db: DB,
-    token: TokenEx,
+    token: AccessToken,
     req: Json<CreateGuildQuery>,
 ) -> Result<Json<CreateGuildResponse>, actix_web::Error> {
     let guild_id = nanoid!();

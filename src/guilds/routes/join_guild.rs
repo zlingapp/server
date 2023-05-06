@@ -1,13 +1,13 @@
 use actix_web::{get, error::{ErrorInternalServerError, ErrorBadRequest}, web::Redirect, Responder};
 use log::warn;
 
-use crate::{db::DB, auth::{token::TokenEx}, guilds::routes::GuildPath};
+use crate::{db::DB, auth::{access_token::AccessToken}, guilds::routes::GuildPath};
 
 // todo: phase this out for invite system. btw, this is GET so people can go in their browser to join a guild
 #[get("/guilds/{guild_id}/join")]
 pub async fn join_guild(
     db: DB,
-    token: TokenEx,
+    token: AccessToken,
     req: GuildPath,
 ) -> Result<impl Responder, actix_web::Error> {
     let rows_affected = sqlx::query!(

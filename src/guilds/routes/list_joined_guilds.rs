@@ -2,7 +2,7 @@ use actix_web::{error::ErrorInternalServerError, get, web::Json};
 use log::warn;
 use serde::Serialize;
 
-use crate::{auth::token::TokenEx, db::DB};
+use crate::{auth::access_token::AccessToken, db::DB};
 
 #[derive(Serialize)]
 pub struct GuildNameAndId {
@@ -13,7 +13,7 @@ pub struct GuildNameAndId {
 #[get("/guilds")]
 pub async fn list_joined_guilds(
     db: DB,
-    token: TokenEx,
+    token: AccessToken,
 ) -> Result<Json<Vec<GuildNameAndId>>, actix_web::Error> {
     let guilds_list = sqlx::query_as!(
         GuildNameAndId,

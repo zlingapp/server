@@ -18,7 +18,7 @@ use nanoid::nanoid;
 use serde::Deserialize;
 
 use crate::{
-    auth::token::TokenEx,
+    auth::access_token::AccessToken,
     voice::{channel::VoiceChannel, MutexMap, VoiceClients},
 };
 use crate::{realtime::socket::Socket, util::constant_time_compare};
@@ -99,7 +99,7 @@ impl FromRequest for VoiceClientEx {
             
             if !trying_to_connect_to_ws {
                 // validate session
-                TokenEx::from_request(&req, &mut actix_web::dev::Payload::None).await?;
+                AccessToken::from_request(&req, &mut actix_web::dev::Payload::None).await?;
     
                 // todo: a bunch of logic & checks here to make sure the user is allowed to connect to the channel
                 //       use the return value of the above line to get the user

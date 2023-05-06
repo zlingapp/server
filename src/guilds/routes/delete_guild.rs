@@ -5,12 +5,12 @@ use actix_web::{
 };
 use log::warn;
 
-use crate::{auth::token::TokenEx, db::DB, guilds::routes::GuildPath};
+use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath};
 
 #[delete("/guilds/{guild_id}")]
 pub async fn delete_guild(
     db: DB,
-    token: TokenEx,
+    token: AccessToken,
     req: GuildPath,
 ) -> Result<HttpResponse, actix_web::Error> {
     let rows_affected = sqlx::query!(

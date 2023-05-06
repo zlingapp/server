@@ -8,7 +8,7 @@ use log::warn;
 use serde::Serialize;
 
 use crate::{
-    auth::{token::TokenEx}, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath,
+    auth::{access_token::AccessToken}, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath,
 };
 
 #[derive(Serialize)]
@@ -23,7 +23,7 @@ pub type ListChannelsResponse = Vec<ChannelInfo>;
 #[get("/guilds/{guild_id}/channels")]
 async fn list_guild_channels(
     db: DB,
-    token: TokenEx,
+    token: AccessToken,
     path: GuildPath,
 ) -> Result<Json<ListChannelsResponse>, Error> {
     let user_in_guild = db

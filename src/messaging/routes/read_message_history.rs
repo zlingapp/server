@@ -8,7 +8,7 @@ use log::warn;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::{auth::token::TokenEx, db::DB};
+use crate::{auth::access_token::AccessToken, db::DB};
 
 #[derive(Deserialize)]
 pub struct MessageHistoryQuery {
@@ -20,7 +20,7 @@ const MAX_MESSAGE_LIMIT: i64 = 50;
 #[get("/guilds/{guild_id}/channels/{channel_id}/messages")]
 async fn read_message_history(
     db: DB,
-    token: TokenEx,
+    token: AccessToken,
     path: Path<(String, String)>,
     req: Query<MessageHistoryQuery>,
 ) -> Result<HttpResponse, Error> {

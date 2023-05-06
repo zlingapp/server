@@ -11,7 +11,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    auth::token::TokenEx, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath,
+    auth::access_token::AccessToken, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath,
 };
 
 #[derive(Deserialize)]
@@ -34,7 +34,7 @@ lazy_static! {
 #[post("/guilds/{guild_id}/channels")]
 async fn create_channel(
     db: DB,
-    token: TokenEx,
+    token: AccessToken,
     req: Json<CreateChannelRequest>,
     path: GuildPath,
 ) -> Result<Json<CreateChannelResponse>, Error> {

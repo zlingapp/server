@@ -8,7 +8,7 @@ use actix_web::FromRequest;
 use futures::Future;
 use serde::Serialize;
 
-use crate::{auth::token::TokenEx, db::DB};
+use crate::{auth::access_token::AccessToken, db::DB};
 
 pub type UserId = String;
 
@@ -53,7 +53,7 @@ impl FromRequest for UserEx {
         let req = req.clone();
         Box::pin(async move {
             use actix_web::error::ErrorUnauthorized;
-            let token = TokenEx::from_request(&req, &mut actix_web::dev::Payload::None).await?;
+            let token = AccessToken::from_request(&req, &mut actix_web::dev::Payload::None).await?;
 
             let user = req
                 .app_data::<DB>()
