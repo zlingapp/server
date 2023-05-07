@@ -90,6 +90,7 @@ pub async fn voice_events_ws(
     }
 
     let (socket, response) = Socket::new_arc_from_request(
+        nanoid::nanoid!(),
         &req,
         body,
         // on message

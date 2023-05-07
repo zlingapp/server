@@ -62,9 +62,11 @@ pub async fn events_ws(
 
     let token = Arc::new(token);
 
+    let socket_id = nanoid::nanoid!();
+
     {
         let ecm = ecm.clone();
-        let token = token.clone();
+        let socket_id = socket_id.clone();
 
         on_message_handler = Box::new(move |msg: String| {
             // message can contain keys `sub`, `unsub`, and `message`
@@ -90,8 +92,10 @@ pub async fn events_ws(
             if let Some(Some(array)) = msg.get("sub").map(|v| v.as_array()) {
                 for v in array {
                     if let Some(Ok(topic)) = v.as_str().map(|s| s.parse()) {
-                        // try to subscribe
-                        ecm.subscribe(&token.user_id, topic).unwrap_or(());
+                        // todo: do permission check here
+
+                        // susbcribe to topic
+                        ecm.subscribe(&socket_id, topic).unwrap_or(());
                     }
                 }
             }
@@ -99,8 +103,10 @@ pub async fn events_ws(
             if let Some(Some(array)) = msg.get("unsub").map(|v| v.as_array()) {
                 array.iter().for_each(|v| {
                     if let Some(Ok(topic)) = v.as_str().map(|s| s.parse()) {
-                        // try to unsubscribe
-                        ecm.unsubscribe(&token.user_id, &topic).unwrap_or(());
+                        // todo: do permission check here
+
+                        // unsubscribe from topic
+                        ecm.unsubscribe(&socket_id, &topic).unwrap_or(());
                     }
                 })
             }
@@ -108,14 +114,15 @@ pub async fn events_ws(
     }
 
     {
-        let user_id = token.user_id.clone();
+        let socket_id = socket_id.clone();
         let ecm = ecm.clone();
         on_close_handler = Box::new(move |_| {
-            ecm.remove_consumer(&user_id);
+            ecm.remove_consumer(&socket_id);
         });
     }
 
     let (socket, response) = Socket::new_arc_from_request(
+        socket_id,
         &req,
         body,
         // on message

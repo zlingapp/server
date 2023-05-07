@@ -1,6 +1,6 @@
 use std::{
     sync::{Arc, Mutex, RwLock, Weak},
-    time::Duration,
+    time::Duration, hash::{Hash, Hasher},
 };
 
 use actix_rt::{task::JoinHandle, time::sleep};
@@ -27,6 +27,9 @@ pub enum SendFailureReason {
 }
 
 pub struct Socket {
+    /// Internal nanoid, randomly generated.
+    pub id: String,
+    
     session: RwLock<Option<actix_ws::Session>>,
     watchdog_handle: Mutex<Option<JoinHandle<()>>>,
     /// The last time we received a ping from the client.
@@ -127,6 +130,8 @@ impl Socket {
 
     /// Returns an instance of Socket and the response to send to the client.
     pub fn new_arc_from_request(
+        // this should be random
+        socket_id: String,
         req: &HttpRequest,
         body: web::Payload,
         on_message: Option<Callback<String>>,
@@ -135,6 +140,7 @@ impl Socket {
         let (response, session, msg_stream) = actix_ws::handle(&req, body)?;
 
         let instance = Arc::new(Self {
+            id: socket_id,
             session: RwLock::new(Some(session.clone())),
             last_ping: RwLock::new(None),
             watchdog_handle: Mutex::new(None),
@@ -180,3 +186,17 @@ impl Drop for Socket {
         }
     }
 }
+
+impl Hash for Socket {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl PartialEq for Socket {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Socket {}

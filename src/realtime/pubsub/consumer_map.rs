@@ -23,11 +23,11 @@ impl ConsumerMap {
 
     pub fn add_consumer_with_topics(&mut self, consumer: EventConsumer, topics: Vec<Topic>) {
         self.id_to_cons_and_topics
-            .insert(consumer.user_id.clone(), (consumer, topics));
+            .insert(consumer.socket.id.clone(), (consumer, topics));
     }
 
-    pub fn remove_consumer(&mut self, user_id: &str) {
-        if let Some((consumer, topics)) = self.id_to_cons_and_topics.remove(user_id) {
+    pub fn remove_consumer(&mut self, socket_id: &str) {
+        if let Some((consumer, topics)) = self.id_to_cons_and_topics.remove(socket_id) {
             for topic in topics {
                 if let Some(consumers) = self.topic_to_cons.get_mut(&topic) {
                     consumers.remove(&consumer);
@@ -36,14 +36,15 @@ impl ConsumerMap {
         }
     }
 
-    pub fn subscribe(&mut self, user_id: &str, topic: Topic) -> Result<(), ()> {
-        if let Some((ref consumer, topics)) = self.id_to_cons_and_topics.get_mut(user_id) {
+    pub fn subscribe(&mut self, socket_id: &str, topic: Topic) -> Result<(), ()> {
+        if let Some((ref consumer, topics)) = self.id_to_cons_and_topics.get_mut(socket_id) {
             topics.push(topic.clone());
 
             if let Some(consumers) = self.topic_to_cons.get_mut(&topic) {
                 consumers.insert(consumer.clone());
             } else {
-                self.topic_to_cons.insert(topic, HashSet::from([consumer.clone()]));
+                self.topic_to_cons
+                    .insert(topic, HashSet::from([consumer.clone()]));
             }
         } else {
             return Err(());
@@ -51,8 +52,8 @@ impl ConsumerMap {
         Ok(())
     }
 
-    pub fn unsubscribe(&mut self, user_id: &str, topic: &Topic) -> Result<(), ()> {
-        if let Some((consumer, topics)) = self.id_to_cons_and_topics.get_mut(user_id) {
+    pub fn unsubscribe(&mut self, socket_id: &str, topic: &Topic) -> Result<(), ()> {
+        if let Some((consumer, topics)) = self.id_to_cons_and_topics.get_mut(socket_id) {
             topics.retain(|t| t != topic);
 
             if let Some(consumers) = self.topic_to_cons.get_mut(&topic) {

@@ -50,16 +50,16 @@ impl EventConsumerManager {
         self.consumers.write().unwrap().add_consumer(consumer);
     }
 
-    pub fn remove_consumer(&self, user_id: &str) {
-        self.consumers.write().unwrap().remove_consumer(user_id);
+    pub fn remove_consumer(&self, socket_id: &str) {
+        self.consumers.write().unwrap().remove_consumer(socket_id);
     }
 
-    pub fn subscribe(&self, user_id: &str, topic: Topic) -> Result<(), ()> {
-        self.consumers.write().unwrap().subscribe(user_id, topic)
+    pub fn subscribe(&self, socket_id: &str, topic: Topic) -> Result<(), ()> {
+        self.consumers.write().unwrap().subscribe(socket_id, topic)
     }
 
-    pub fn unsubscribe(&self, user_id: &str, topic: &Topic) -> Result<(), ()> {
-        self.consumers.write().unwrap().unsubscribe(user_id, topic)
+    pub fn unsubscribe(&self, socket_id: &str, topic: &Topic) -> Result<(), ()> {
+        self.consumers.write().unwrap().unsubscribe(socket_id, topic)
     }
 
     pub async fn notify_of_new_message(
