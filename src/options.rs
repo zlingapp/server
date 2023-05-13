@@ -5,7 +5,7 @@ use std::{
 };
 
 use lazy_static::lazy_static;
-use log::info;
+use log::{info, warn};
 use mediasoup::{
     prelude::ListenIp,
     router::RouterOptions,
@@ -167,6 +167,11 @@ pub fn initialize_all() {
 pub fn print_all() {
     info!("config: RTC Ports: {}-{}", *RTC_PORT_MIN, *RTC_PORT_MAX);
     info!("config: Announce IP: {}", *ANNOUNCE_IP);
+
+    if ANNOUNCE_IP.is_loopback() {
+        warn!("\n\nANNOUNCE_IP is set to a loopback address, voice clients will probably not be able to connect!\nSet it to your server's public IP!\n")
+    }
+
     info!("config: Initial Available Outgoing Bitrate: {}bps", *INITIAL_AVAILABLE_OUTGOING_BITRATE);
     info!("config: UDP Enabled: {}", *ENABLE_UDP);
     info!("config: TCP Enabled: {}", *ENABLE_TCP);
