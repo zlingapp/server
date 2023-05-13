@@ -46,9 +46,9 @@ lazy_static! {
 
     static ref DB_HOST: String = var("DB_HOST", "localhost");
     static ref DB_PORT: u16 = var("DB_PORT", "5432");
-    static ref DB_USER: String = var("DB_USER", "chat_backend");
-    static ref DB_PASSWORD: String = var("DB_PASSWORD", "changeme");
-    static ref DB_NAME: String = var("DB_NAME", "chat_backend");
+    static ref DB_USER: String = var("DB_USER", "zling-backend");
+    static ref DB_PASSWORD: String = var("DB_PASSWORD", "dev");
+    static ref DB_NAME: String = var("DB_NAME", "zling-backend");
     static ref DB_POOL_MAX_CONNS: u32 = var("DB_POOL_MAX_CONNS", "5");
 
     pub static ref TOKEN_SIGNING_KEY: [u8; 32] = {
