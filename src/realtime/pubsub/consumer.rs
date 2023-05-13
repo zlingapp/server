@@ -1,7 +1,4 @@
-use std::{
-    hash::{Hash, Hasher},
-    sync::Arc,
-};
+use std::{hash::Hash, sync::Arc};
 
 use crate::{auth::user::UserId, realtime::socket::Socket};
 

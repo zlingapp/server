@@ -1,4 +1,4 @@
-use actix_web::{get, post};
+use actix_web::post;
 use actix_web::{error::ErrorUnauthorized, web::Json, Error, HttpRequest, HttpResponse};
 use serde::Deserialize;
 use serde_json::json;
