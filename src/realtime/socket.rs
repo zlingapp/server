@@ -7,8 +7,13 @@ use actix_rt::{task::JoinHandle, time::sleep};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_ws::{Message, MessageStream, Session};
 use futures::StreamExt;
+use lazy_static::lazy_static;
 
 pub type Callback<T> = Box<dyn Fn(T) -> () + Send + Sync>;
+
+lazy_static!{
+    static ref SOCKET_LAST_PING_TIMEOUT: Duration = Duration::from_secs(30);
+}
 
 #[derive(Debug)]
 pub enum DisconnectReason {
@@ -114,9 +119,9 @@ impl Socket {
                 };
 
                 // if the client hasn't sent a heartbeat in 10 seconds, remove it from the channel
-                let last_ping = socket.last_ping.read().unwrap();
+                let last_ping = socket.last_ping.read().unwrap().unwrap();
 
-                if last_ping.is_none() || last_ping.unwrap().elapsed().as_secs() > 10 {
+                if last_ping.elapsed() > *SOCKET_LAST_PING_TIMEOUT {
                     if let Some(session) = socket.session.write().unwrap().take() {
                         session.close(None).await.unwrap_or(());
                     }
@@ -142,7 +147,7 @@ impl Socket {
         let instance = Arc::new(Self {
             id: socket_id,
             session: RwLock::new(Some(session.clone())),
-            last_ping: RwLock::new(None),
+            last_ping: RwLock::new(Some(std::time::Instant::now())),
             watchdog_handle: Mutex::new(None),
             on_message,
             on_disconnect,
