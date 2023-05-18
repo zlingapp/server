@@ -1,7 +1,7 @@
 use actix_web::{
     error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized},
     post,
-    web::Json,
+    web::{Json, Data},
     Error,
 };
 use lazy_static::lazy_static;
@@ -11,7 +11,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    auth::access_token::AccessToken, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath,
+    auth::access_token::AccessToken, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath, realtime::pubsub::consumer_manager::EventConsumerManager,
 };
 
 #[derive(Deserialize)]
@@ -37,6 +37,7 @@ async fn create_channel(
     token: AccessToken,
     req: Json<CreateChannelRequest>,
     path: GuildPath,
+    ecm: Data<EventConsumerManager>,
 ) -> Result<Json<CreateChannelResponse>, Error> {
     let user_in_guild = db
         .is_user_in_guild(&token.user_id, &path.guild_id)
@@ -71,6 +72,8 @@ async fn create_channel(
         ErrorInternalServerError("")
     })?
     .id;
+
+    ecm.notify_guild_channel_list_update(&path.guild_id).await;
 
     Ok(Json(CreateChannelResponse { id: channel_id }))
 }

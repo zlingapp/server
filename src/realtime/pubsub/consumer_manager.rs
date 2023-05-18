@@ -59,7 +59,10 @@ impl EventConsumerManager {
     }
 
     pub fn unsubscribe(&self, socket_id: &str, topic: &Topic) -> Result<(), ()> {
-        self.consumers.write().unwrap().unsubscribe(socket_id, topic)
+        self.consumers
+            .write()
+            .unwrap()
+            .unsubscribe(socket_id, topic)
     }
 
     pub async fn notify_of_new_message(
@@ -87,6 +90,14 @@ impl EventConsumerManager {
         self.broadcast(
             &Topic::new(TopicType::Channel, channel_id.to_owned()),
             payload,
+        )
+        .await;
+    }
+
+    pub async fn notify_guild_channel_list_update(&self, guild_id: &str) {
+        self.broadcast(
+            &Topic::new(TopicType::Guild, guild_id.to_string()),
+            serde_json::json!({"type": "channel_list_update"}),
         )
         .await;
     }
