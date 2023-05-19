@@ -2,9 +2,9 @@ use std::str::FromStr;
 use std::{ops::Deref, pin::Pin};
 
 use actix_web::FromRequest;
+use chrono::{Utc, DateTime};
 use derive_more::{Display, Error};
 use futures::Future;
-use time::OffsetDateTime;
 
 use crate::{crypto, options::TOKEN_SIGNING_KEY};
 
@@ -58,11 +58,11 @@ impl AccessToken {
     }
 
     pub fn new(user_id: String) -> Self {
-        let expires = OffsetDateTime::now_utc() + *ACCESS_TOKEN_VALIDITY;
+        let expires = Utc::now() + *ACCESS_TOKEN_VALIDITY;
         Self::with_expiry(user_id, expires)
     }
 
-    pub fn with_expiry(user_id: String, expires: OffsetDateTime) -> Self {
+    pub fn with_expiry(user_id: String, expires: DateTime<Utc>) -> Self {
         let mut token = Token::new(user_id, expires, "".to_string());
 
         let serialized = token.to_string();

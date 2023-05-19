@@ -1,9 +1,9 @@
 use crate::db::Database;
 
+use chrono::{Duration, Utc};
 use lazy_static::lazy_static;
 use nanoid::nanoid;
 use sqlx::{query, types::chrono::NaiveDateTime};
-use time::{Duration, OffsetDateTime};
 
 use crate::{
     auth::{access_token::AccessToken, token::Token, user::User},
@@ -34,7 +34,7 @@ pub enum IssueAccessTokenResult {
 
 impl Database {
     async fn create_new_tokens_for(&self, user_id: &str, user_agent: &str) -> (AccessToken, Token) {
-        let expires = OffsetDateTime::now_utc() + *REFRESH_TOKEN_VALIDITY;
+        let expires = Utc::now() + *REFRESH_TOKEN_VALIDITY;
 
         // add refresh token to db
         let nonce = query!(
@@ -48,7 +48,7 @@ impl Database {
             user_id,
             nanoid!(),
             nanoid!(48),
-            NaiveDateTime::from_timestamp_opt(expires.unix_timestamp(), 0),
+            NaiveDateTime::from_timestamp_opt(expires.timestamp(), 0),
             user_agent
         )
         .fetch_one(&self.pool)

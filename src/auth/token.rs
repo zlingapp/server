@@ -1,17 +1,17 @@
+use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::{Display, Error};
 use std::str::FromStr;
-use time::OffsetDateTime;
 
 use super::user::UserId;
 #[derive(Debug, PartialEq, Eq)]
 pub struct Token {
     pub user_id: UserId,
-    pub expires: OffsetDateTime, // utc
+    pub expires: DateTime<Utc>, // utc
     pub proof: String,
 }
 
 impl Token {
-    pub fn new(user_id: String, expires: OffsetDateTime, proof: String) -> Self {
+    pub fn new(user_id: String, expires: DateTime<Utc>, proof: String) -> Self {
         Self {
             user_id,
             expires,
@@ -20,7 +20,8 @@ impl Token {
     }
 
     pub fn is_expired(&self) -> bool {
-        self.expires < OffsetDateTime::now_utc()
+        // check if expiry is before now
+        self.expires < Utc::now()
     }
 }
 
@@ -30,7 +31,7 @@ impl ToString for Token {
     fn to_string(&self) -> String {
         // user id is not base64 encoded
         // let user_id = base64_url::encode(&self.user_id);
-        let expiry: [u8; 4] = (self.expires.unix_timestamp() as u32).to_be_bytes();
+        let expiry: [u8; 4] = (self.expires.timestamp() as u32).to_be_bytes();
         let expiry = base64_url::encode(&expiry);
         format!("{}.{}.{}", self.user_id, expiry, self.proof)
     }
@@ -68,8 +69,11 @@ impl FromStr for Token {
             .map_err(|_| TokenParseError::InvalidFormat)?;
         let expires = u32::from_be_bytes(expires);
 
-        let expires = OffsetDateTime::from_unix_timestamp(expires as i64)
-            .map_err(|_| TokenParseError::InvalidFormat)?;
+        let expires = NaiveDateTime::from_timestamp_opt(expires as i64, 0)
+            .ok_or(TokenParseError::InvalidFormat)?
+            .and_local_timezone(Utc)
+            .single()
+            .ok_or(TokenParseError::InvalidFormat)?;
 
         let tok = Self::new(user_id, expires, proof.to_string());
         if tok.is_expired() {
