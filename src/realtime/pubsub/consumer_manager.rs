@@ -101,4 +101,19 @@ impl EventConsumerManager {
         )
         .await;
     }
+
+    pub async fn send_typing(&self, channel_id: &str, user: &User) {
+        let topic = Topic::new(TopicType::Channel, channel_id.to_string());
+
+        let data = json!({
+            "type": "typing", 
+            "user": {
+                "id": user.id,
+                "username": user.name,
+                "avatar": user.avatar,
+            }
+        });
+
+        self.broadcast(&topic, data).await;
+    }
 }
