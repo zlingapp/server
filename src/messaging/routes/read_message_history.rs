@@ -4,6 +4,7 @@ use actix_web::{
     web::{Path, Query},
     Error, HttpResponse,
 };
+use chrono::{DateTime, NaiveDateTime, Utc};
 use log::warn;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -13,6 +14,8 @@ use crate::{auth::access_token::AccessToken, db::DB};
 #[derive(Deserialize)]
 pub struct MessageHistoryQuery {
     limit: Option<i64>,
+    before: Option<DateTime<Utc>>,
+    after: Option<DateTime<Utc>>,
 }
 
 const MAX_MESSAGE_LIMIT: i64 = 50;
@@ -35,7 +38,11 @@ async fn read_message_history(
         return Err(ErrorUnauthorized("access_denied"));
     }
 
-    let limit = req.limit.unwrap_or(50);
+    let limit = req.limit.unwrap_or(MAX_MESSAGE_LIMIT);
+
+    if limit <= 0 {
+        return Err(ErrorBadRequest("invalid_limit"));
+    }
 
     if limit > MAX_MESSAGE_LIMIT {
         return Err(ErrorBadRequest(format!(
@@ -59,13 +66,19 @@ async fn read_message_history(
             messages.channel_id = $1 
             AND messages.user_id = members.user_id 
             AND messages.guild_id = members.guild_id
-            AND members.user_id = users.id 
+            AND members.user_id = users.id
+            AND messages.created_at < $3
+            AND messages.created_at > $4
         )
-        ORDER BY created_at DESC 
+        ORDER BY messages.created_at DESC 
         LIMIT $2
         "#,
         channel_id,
-        limit
+        limit,
+        req.before.unwrap_or(Utc::now()).naive_utc(),
+        req.after
+            .map(|d| d.naive_utc())
+            .unwrap_or(NaiveDateTime::from_timestamp_opt(0, 0).unwrap())
     )
     .fetch_all(&db.pool)
     .await
@@ -92,5 +105,10 @@ async fn read_message_history(
         })
         .collect();
 
-    Ok(HttpResponse::Ok().json(messages))
+    Ok(if messages.len() < limit as usize {
+        HttpResponse::Ok()
+    } else {
+        HttpResponse::PartialContent()
+    }
+    .json(messages))
 }
