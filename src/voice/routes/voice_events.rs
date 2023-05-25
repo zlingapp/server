@@ -15,7 +15,7 @@ use crate::{
         channel::VoiceChannel,
         client::{VoiceClient, VoiceClientEx},
         VoiceChannels, VoiceClients,
-    },
+    }, auth::user::PublicUserInfo,
 };
 
 #[get("/voice/ws")] // WARNING: before changing this path, make sure to change it in the client extractor!!!
@@ -149,6 +149,7 @@ impl VoiceChannel {
         let event = json!({
             "type": "client_connected",
             "identity": client.identity,
+            "user": PublicUserInfo::from(client.user.clone()),
         });
 
         self.send_to_all_except(&client, event.to_string()).await;

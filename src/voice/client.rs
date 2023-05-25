@@ -18,7 +18,7 @@ use nanoid::nanoid;
 use serde::Deserialize;
 
 use crate::{
-    auth::access_token::AccessToken,
+    auth::{access_token::AccessToken, user::User},
     voice::{channel::VoiceChannel, MutexMap, VoiceClients},
 };
 use crate::{realtime::socket::Socket, util::constant_time_compare};
@@ -37,10 +37,12 @@ pub struct VoiceClient {
     pub socket: RwLock<Option<Arc<Socket>>>,
     // this is used to cancel the initial connect watch task
     pub socket_initial_connect_watch_handle: Mutex<Option<JoinHandle<()>>>,
+    // the user that this client belongs to
+    pub user: User,
 }
 
 impl VoiceClient {
-    pub fn new_random(channel: Arc<VoiceChannel>) -> Self {
+    pub fn with_channel_and_user(channel: Arc<VoiceChannel>, user: User) -> Self {
         Self {
             identity: nanoid!(),
             token: nanoid!(64),
@@ -51,6 +53,7 @@ impl VoiceClient {
             consumers: HashMap::new().into(),
             socket: None.into(),
             socket_initial_connect_watch_handle: Mutex::new(None),
+            user,
         }
     }
 
@@ -101,7 +104,7 @@ impl FromRequest for VoiceClientEx {
                 // validate session
                 AccessToken::from_request(&req, &mut actix_web::dev::Payload::None).await?;
     
-                // todo: a bunch of logic & checks here to make sure the user is allowed to connect to the channel
+                // todo: a bunch of logic & checks here to make sure the user is allowed to do operations in the channel
                 //       use the return value of the above line to get the user
             }
 

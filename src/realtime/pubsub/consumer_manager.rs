@@ -2,7 +2,7 @@ use futures::future::join_all;
 use serde_json::{json, Value};
 use sqlx::types::chrono::NaiveDateTime;
 
-use crate::auth::user::User;
+use crate::auth::user::{User, PublicUserInfo};
 
 use super::{
     consumer::EventConsumer,
@@ -107,11 +107,7 @@ impl EventConsumerManager {
 
         let data = json!({
             "type": "typing", 
-            "user": {
-                "id": user.id,
-                "username": user.name,
-                "avatar": user.avatar,
-            }
+            "user": PublicUserInfo::from(user.clone())
         });
 
         self.broadcast(&topic, data).await;

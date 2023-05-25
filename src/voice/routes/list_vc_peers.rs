@@ -2,13 +2,14 @@ use actix_web::{get, web::Json};
 use derive_more::{Display, Error};
 use serde::Serialize;
 
-use crate::voice::client::VoiceClientEx;
+use crate::{voice::client::VoiceClientEx, auth::user::PublicUserInfo};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChannelMemberInfo {
     identity: String,
     producers: Vec<String>,
+    user: PublicUserInfo,
 }
 
 #[derive(Debug, Display, Error)]
@@ -30,6 +31,7 @@ pub async fn list_vc_peers(
             .map(|c| ChannelMemberInfo {
                 identity: c.identity.clone(),
                 producers: c.producers.lock().unwrap().keys().cloned().collect(),
+                user: PublicUserInfo::from(c.user.clone()),
             })
             .collect();
     }

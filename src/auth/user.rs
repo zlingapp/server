@@ -26,6 +26,25 @@ pub struct User {
     pub email: String,
 }
 
+// helper struct for representing user info to other users
+// the fields here should not be sensitive info, eg. email
+#[derive(Serialize)]
+pub struct PublicUserInfo {
+    pub id: UserId,
+    pub username: String,
+    pub avatar: String,
+}
+
+impl From<User> for PublicUserInfo {
+    fn from(user: User) -> Self {
+        Self {
+            id: user.id,
+            username: user.name,
+            avatar: user.avatar,
+        }
+    }
+}
+
 pub struct UserEx(User);
 
 impl Deref for UserEx {
