@@ -34,7 +34,7 @@ lazy_static! {
     /// This is an example for using doc comment attributes
     static ref RTC_PORT_MIN: u16 = var("RTC_PORT_MIN", "10000");
     static ref RTC_PORT_MAX: u16 = var("RTC_PORT_MAX", "11000");
-    
+
     static ref ANNOUNCE_IP: IpAddr = IpAddr::V4(var("ANNOUNCE_IP", "127.0.0.1"));
 
     static ref ENABLE_UDP: bool = var("ENABLE_UDP", "true");
@@ -51,9 +51,23 @@ lazy_static! {
     static ref DB_NAME: String = var("DB_NAME", "zling-backend");
     static ref DB_POOL_MAX_CONNS: u32 = var("DB_POOL_MAX_CONNS", "5");
 
+    pub static ref MEDIA_PATH: String = {
+        let path: String = var("MEDIA_PATH", "/var/tmp/zling-media");
+
+        // create directory
+        std::fs::create_dir_all(path.clone()).expect("failed to create directory specified by MEDIA_PATH");
+
+        let is_read_only = std::fs::metadata(path.clone()).unwrap().permissions().readonly();
+        if is_read_only {
+            warn!("\n\nMEDIA_PATH directory at `{}` is not writable!\nUploads will probably fail!\n\n", path);
+        }
+
+        path
+    };
+
     pub static ref TOKEN_SIGNING_KEY: [u8; 32] = {
         let tsk: String = var("TOKEN_SIGNING_KEY", "");
-        
+
         if tsk.is_empty() {
             info!("Generating new token signing key... (provide one with TOKEN_SIGNING_KEY)");
             let generated = crate::crypto::generate_token_sig_key();
@@ -137,7 +151,7 @@ pub fn initialize_all() {
     lazy_static::initialize(&RTC_PORT_MAX);
     lazy_static::initialize(&ANNOUNCE_IP);
     lazy_static::initialize(&INITIAL_AVAILABLE_OUTGOING_BITRATE);
-    
+
     lazy_static::initialize(&ENABLE_UDP);
     lazy_static::initialize(&ENABLE_TCP);
     lazy_static::initialize(&PREFER_UDP);
@@ -162,6 +176,8 @@ pub fn initialize_all() {
     lazy_static::initialize(&DB_NAME);
     lazy_static::initialize(&DB_POOL_MAX_CONNS);
     lazy_static::initialize(&TOKEN_SIGNING_KEY);
+
+    lazy_static::initialize(&MEDIA_PATH);
 }
 
 pub fn print_all() {
@@ -172,9 +188,23 @@ pub fn print_all() {
         warn!("\n\nANNOUNCE_IP is set to a loopback address, voice clients will probably not be able to connect!\nSet it to your server's public IP!\n")
     }
 
-    info!("config: Initial Available Outgoing Bitrate: {}bps", *INITIAL_AVAILABLE_OUTGOING_BITRATE);
+    info!(
+        "config: Initial Available Outgoing Bitrate: {}bps",
+        *INITIAL_AVAILABLE_OUTGOING_BITRATE
+    );
     info!("config: UDP Enabled: {}", *ENABLE_UDP);
     info!("config: TCP Enabled: {}", *ENABLE_TCP);
-    info!("config: Preferred: {}", if *PREFER_UDP { "UDP" } else { "TCP" });
-    info!("config: Database: {} at {}:{} ({} max connections)", *DB_NAME, *DB_HOST, *DB_PORT, *DB_POOL_MAX_CONNS);
+    info!(
+        "config: Preferred: {}",
+        if *PREFER_UDP { "UDP" } else { "TCP" }
+    );
+    info!(
+        "config: Database: {} at {}:{} ({} max connections)",
+        *DB_NAME, *DB_HOST, *DB_PORT, *DB_POOL_MAX_CONNS
+    );
+
+    info!(
+        "config: Uploaded media stored in: {}",
+        *MEDIA_PATH
+    );
 }
