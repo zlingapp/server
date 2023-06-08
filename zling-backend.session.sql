@@ -1,0 +1,3 @@
+BEGIN;
+ALTER TABLE guilds RENAME COLUMN avatar TO icon;
+COMMIT;

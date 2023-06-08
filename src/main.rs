@@ -22,6 +22,7 @@ mod realtime;
 mod util;
 mod voice;
 mod media;
+mod settings;
 
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
 
@@ -86,6 +87,7 @@ async fn main() -> std::io::Result<()> {
             .configure(messaging::routes::configure_app)
             // file uploads
             .configure(media::routes::configure_app)
+            .configure(settings::routes::configure_app)
     })
     .workers(2)
     .bind("127.0.0.1:8080")?

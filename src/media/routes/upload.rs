@@ -1,20 +1,23 @@
 use std::io::{self, ErrorKind};
 
-use actix_multipart::{
-    form::{tempfile::TempFile, MultipartForm},
-    Field, Multipart,
-};
+use actix_multipart::{Field, Multipart};
 use actix_web::{
     error::{ErrorBadRequest, ErrorInternalServerError, ErrorPayloadTooLarge},
-    post, Error, HttpRequest, HttpResponse, Responder,
+    post,
+    web::Json,
+    Error, HttpRequest,
 };
 use futures::TryStreamExt;
-use log::{info, warn};
+use log::warn;
 use nanoid::nanoid;
-use serde_json::json;
+use serde_json::{json, Value};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
-use crate::{auth::access_token::AccessToken, media::{FILENAME_REGEX, util::clean_filename}, options};
+use crate::{
+    auth::access_token::AccessToken,
+    media::{util::clean_filename, FILENAME_REGEX},
+    options,
+};
 
 const MAX_FILE_SIZE: usize = 250 * 1_000_000; // 250 MB
 
@@ -23,7 +26,7 @@ pub async fn upload(
     _token: AccessToken,
     mut payload: Multipart,
     request: HttpRequest,
-) -> Result<impl Responder, Error> {
+) -> Result<Json<Value>, Error> {
     let payload_size = request
         .headers()
         .get("content-length")
@@ -47,7 +50,7 @@ pub async fn upload(
 
         let file_name = content_disposition.get_filename().map(String::from);
 
-        let filename = match file_name.map(|v| clean_filename(v)).flatten()  {
+        let filename = match file_name.map(|v| clean_filename(v)).flatten() {
             Some(n) => n,
             None => "unknown-".to_owned() + &nanoid!(5),
         };
@@ -59,14 +62,14 @@ pub async fn upload(
         let id = nanoid!();
         {
             let filename = id.clone() + "_" + &filename;
-            
+
             // final check for file name validity, just to be sure...
             if !FILENAME_REGEX.is_match(&filename) {
                 return Err(ErrorBadRequest("invalid_name"));
             }
-    
+
             let path = (*options::MEDIA_PATH).to_string() + "/" + &filename;
-    
+
             let result = save_file(&path, field).await;
             if let Err(e) = result {
                 warn!("saving usermedia `{}` failed: {}", filename, e);
@@ -75,7 +78,11 @@ pub async fn upload(
         }
 
         let url = format!("/api/media/{}/{}", id, filename);
-        return Ok(HttpResponse::Ok().json(json!({ "name": filename, "url": url })));
+        return Ok(Json(json!({
+            "id": id,
+            "name": filename,
+            "url": url
+        })));
     }
 
     return Err(ErrorBadRequest("missing_file_field"));

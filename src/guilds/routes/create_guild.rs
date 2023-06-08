@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 use crate::{auth::access_token::AccessToken, db::DB};
 
 #[derive(Deserialize)]
-pub struct CreateGuildQuery {
+pub struct CreateGuildRequest {
     name: String,
+    icon: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -23,7 +24,7 @@ pub struct CreateGuildResponse {
 pub async fn create_guild(
     db: DB,
     token: AccessToken,
-    req: Json<CreateGuildQuery>,
+    req: Json<CreateGuildRequest>,
 ) -> Result<Json<CreateGuildResponse>, actix_web::Error> {
     let guild_id = nanoid!();
 
@@ -33,17 +34,19 @@ pub async fn create_guild(
         .await
         .map_err(|_| ErrorInternalServerError("failed"))?;
 
+    // todo: SECURITY: validate name and icon source
     // create the guild
     let rows_affected = sqlx::query!(
         r#"
-            INSERT INTO guilds (id, name, owner) 
-            SELECT $1, $2, $3
+            INSERT INTO guilds (id, name, owner, icon) 
+            SELECT $1, $2, $3, $4
             FROM (SELECT 1) AS t
             WHERE NOT EXISTS (SELECT 1 FROM guilds WHERE id = $1)
         "#,
         guild_id,
         req.name,
-        token.user_id
+        token.user_id,
+        req.icon
     )
     .execute(&mut tx)
     .await
