@@ -14,7 +14,7 @@ use nanoid::nanoid;
 use serde_json::json;
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
-use crate::{auth::access_token::AccessToken, media::FILENAME_REGEX, options};
+use crate::{auth::access_token::AccessToken, media::{FILENAME_REGEX, util::clean_filename}, options};
 
 const MAX_FILE_SIZE: usize = 250 * 1_000_000; // 250 MB
 
@@ -33,8 +33,6 @@ pub async fn upload(
         .parse::<usize>()
         .unwrap();
 
-    info!("payload size: {}", payload_size);
-
     if payload_size > MAX_FILE_SIZE {
         return Err(ErrorPayloadTooLarge("file_size_exceeds_limit"));
     }
@@ -49,9 +47,9 @@ pub async fn upload(
 
         let file_name = content_disposition.get_filename().map(String::from);
 
-        let filename = match file_name {
+        let filename = match file_name.map(|v| clean_filename(v)).flatten()  {
             Some(n) => n,
-            None => "unknown-".to_owned() + &nanoid!(5) + ".txt",
+            None => "unknown-".to_owned() + &nanoid!(5),
         };
 
         if filename.len() > 64 {
@@ -61,7 +59,8 @@ pub async fn upload(
         let id = nanoid!();
         {
             let filename = id.clone() + "_" + &filename;
-    
+            
+            // final check for file name validity, just to be sure...
             if !FILENAME_REGEX.is_match(&filename) {
                 return Err(ErrorBadRequest("invalid_name"));
             }
@@ -92,7 +91,6 @@ async fn save_file(path: &str, mut field: Field) -> io::Result<()> {
     // actually save the file
     while let Ok(chunk) = field.try_next().await {
         if chunk.is_none() {
-            info!("data exausted");
             return Ok(()); // end of stream
         }
         file.write_all(&chunk.unwrap()).await?;

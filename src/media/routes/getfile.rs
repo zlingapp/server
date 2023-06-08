@@ -2,7 +2,7 @@ use actix_files::NamedFile;
 use actix_web::{error::ErrorNotFound, get, web::Path, Error, Responder};
 use serde::Deserialize;
 
-use crate::{auth::access_token::AccessToken, media::FILENAME_REGEX, options};
+use crate::{media::FILENAME_REGEX, options};
 
 #[derive(Deserialize)]
 pub struct FileIdentifierPath {
