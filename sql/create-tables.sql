@@ -16,7 +16,7 @@ CREATE TABLE guilds (
     created_at  timestamp   NOT NULL DEFAULT now(),
     updated_at  timestamp   NOT NULL DEFAULT now(),
     permissions json        NOT NULL DEFAULT '{}'::json,
-    icon        text,
+    icon        text
 );
 CREATE TABLE members (
     user_id     text        NOT NULL,
