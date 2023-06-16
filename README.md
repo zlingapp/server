@@ -60,6 +60,25 @@ The format of tokens resembles JWT but is not compliant for the sake of shortnes
  - `user_id` = `xoKM4W7NDqHjK_V0g9s3y`
  - `expiry` = `BASE64URL_DECODE("ZFZDYw") = 0x64564363 = 1683374947 (big-endian) = Sat May 06 2023 12:09:07 GMT+0000`
 
+#### Generating your token
+If you want access tokens to be valid between runs, you need to generate it persistently once.
+
+Start the server with the following environment variables, for example here with `cargo run`, you may just use the binary, or use `cargo run --release`, etc.
+```
+$ RUST_LOG="info" PRINT_GENERATED_TOKEN_SIGNING_KEY=true cargo run
+
+[...] Version: 0.1.0
+[...] Generating new token signing key... (provide one with TOKEN_SIGNING_KEY)
+[...] Token signing key: d8b9e886234d4500dont_use_this_readmes_key_in_productioa02f9f3bff03
+*logs continue below*
+```
+
+Stop the server and re-start it with `TOKEN_SIGNING_KEY` set to the generated token, for example,
+
+```
+$ RUST_LOG=info,sqlx::query=warn TOKEN_SIGNING_KEY=d8b9e886234d4500dont_use_this_readmes_key_in_productioa02f9f3bff03 ./server
+```
+
 ### Environment Variables
 See [the options.rs file](src/options.rs).
 
@@ -90,6 +109,12 @@ See [the options.rs file](src/options.rs).
 |-|-|-|
 |`TOKEN_SIGNING_KEY`|`String`|Randomly generated|
 |`PRINT_GENERATED_TOKEN_SIGNING_KEY`|`bool`|`false`|
+
+#### User media files
+|Variable|Type|Default|
+|-|-|-|
+|`MEDIA_PATH`|`String`|`/var/tmp/zling-media`|
+
 
 #### Miscellaneous
 - Recommended: start the server with `RUST_LOG=info,sqlx::query=warn`.
