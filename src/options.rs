@@ -31,7 +31,6 @@ where
 }
 
 lazy_static! {
-    /// This is an example for using doc comment attributes
     static ref RTC_PORT_MIN: u16 = var("RTC_PORT_MIN", "10000");
     static ref RTC_PORT_MAX: u16 = var("RTC_PORT_MAX", "11000");
 
