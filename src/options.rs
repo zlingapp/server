@@ -70,11 +70,7 @@ lazy_static! {
         if tsk.is_empty() {
             info!("Generating new token signing key... (provide one with TOKEN_SIGNING_KEY)");
             let generated = crate::crypto::generate_token_sig_key();
-
-            if var::<String>("PRINT_GENERATED_TOKEN_SIGNING_KEY", "false") == "true" {
-                info!("Token signing key: {}", hex::encode(&generated));
-            }
-
+            info!("Token signing key: {}", hex::encode(&generated));
             generated
         } else {
             let key = hex::decode(tsk).unwrap();

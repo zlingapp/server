@@ -38,12 +38,13 @@ By default, Zling's server generates a random token signing key between restarts
 access tokens your clients might be using. If you want access tokens to be valid between runs, you need to generate a 
 token signing key to be used persistently. 
 
-Start the server with the `PRINT_GENERATED_TOKEN_SIGNING_KEY` environment variable set to `true`. 
-You may start the server with `cargo run`, `cargo run --release`, or just use the pre-built binary.
+Start the server with `TOKEN_SIGNING_KEY` unset to get a random token. You may
+start the server with `cargo run`, `cargo run --release`, or just use the
+pre-built binary.
 
 Make sure `RUST_LOG` is at least set to `info`, so you can actually see the token in the log output. 
 ```
-$ RUST_LOG="info" PRINT_GENERATED_TOKEN_SIGNING_KEY=true cargo run
+$ RUST_LOG=info cargo run
 
 [...] Version: 0.1.0
 [...] Generating new token signing key... (provide one with TOKEN_SIGNING_KEY)
@@ -51,9 +52,9 @@ $ RUST_LOG="info" PRINT_GENERATED_TOKEN_SIGNING_KEY=true cargo run
 *logs continue below*
 ```
 
-Now, stop the server and restart it with `TOKEN_SIGNING_KEY` set to the generated token:
+Now, restart the server with `TOKEN_SIGNING_KEY` set to the generated token:
 ```
-$ RUST_LOG=info,sqlx::query=warn TOKEN_SIGNING_KEY=d8b9e886234d4500dont_use_this_readmes_key_in_productiona02f9f3bff03 ./server
+$ RUST_LOG=info,sqlx::query=warn TOKEN_SIGNING_KEY=xxxxx cargo run --release
 ```
 Now you can try logging in on a client, restarting the server, then accessing the server again from the client. If you did 
 everything correctly, you won't have to log in again.
@@ -120,11 +121,10 @@ See [the options.rs file](src/options.rs).
 |`PREFER_TCP`|`bool`|`false`|
 |`INITIAL_AVAILABLE_OUTGOING_BITRATE`|`u32`|`600000`|
 
-#### Token Generation
+#### Access Token Signing
 |Variable|Type|Default|
 |-|-|-|
 |`TOKEN_SIGNING_KEY`|`String`|Randomly generated|
-|`PRINT_GENERATED_TOKEN_SIGNING_KEY`|`bool`|`false`|
 
 #### User media files
 |Variable|Type|Default|
