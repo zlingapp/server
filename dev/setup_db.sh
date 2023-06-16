@@ -23,5 +23,8 @@ echo
 echo "   To get an SQL shell inside the database container, run:"
 echo "   $ docker exec -it zling-db psql -U zling-backend"
 echo
+echo "   To run an SQL file inside the database container:"
+echo "   $ docker exec -it zling-db psql -U zling-backend < your-file.sql"
+echo
 echo "   Happy hacking!"
 echo
