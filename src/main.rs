@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{collections::HashMap, sync::Mutex, env};
 
 use actix_web::{web::Data, App, HttpServer};
 use db::Database;
@@ -28,6 +28,12 @@ pub type MutexMap<T> = Mutex<HashMap<String, T>>;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // override RUST_LOG if it's not set
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info,sqlx::query=warn")
+    }
+
+    // initialize logger
     env_logger::init();
 
     info!("Version: {}", env!("CARGO_PKG_VERSION"));
