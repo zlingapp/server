@@ -8,7 +8,8 @@ use log::warn;
 use serde::Serialize;
 
 use crate::{
-    auth::{access_token::AccessToken}, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath,
+    auth::access_token::AccessToken, channels::channel::ChannelType, db::DB,
+    guilds::routes::GuildPath,
 };
 
 #[derive(Serialize)]

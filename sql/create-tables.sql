@@ -42,9 +42,10 @@ CREATE TABLE messages (
     guild_id    text        NOT NULL, -- this might be redundant
     channel_id  text        NOT NULL,
     user_id     text        NOT NULL,
-    content     text        NOT NULL,
+    content     text,
     created_at  timestamp   NOT NULL DEFAULT now(),
-    updated_at  timestamp   NOT NULL DEFAULT now()
+    updated_at  timestamp   NOT NULL DEFAULT now(),
+    attachments json
 );
 CREATE TABLE roles (
     id          text        NOT NULL PRIMARY KEY,

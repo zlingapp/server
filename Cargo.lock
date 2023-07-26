@@ -566,6 +566,7 @@ dependencies = [
  "lazy_static",
  "log",
  "mediasoup",
+ "mime",
  "nanoid",
  "rand",
  "regex",

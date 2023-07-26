@@ -45,7 +45,7 @@ impl From<User> for PublicUserInfo {
     }
 }
 
-pub struct UserEx(User);
+pub struct UserEx(pub User);
 
 impl Deref for UserEx {
     type Target = User;

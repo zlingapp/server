@@ -7,9 +7,13 @@ use actix_web::{
 use chrono::{DateTime, NaiveDateTime, Utc};
 use log::warn;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::Value;
 
-use crate::{auth::access_token::AccessToken, db::DB};
+use crate::{
+    auth::access_token::AccessToken,
+    db::DB,
+    messaging::message::{Message, MessageAuthor},
+};
 
 #[derive(Deserialize)]
 pub struct MessageHistoryQuery {
@@ -57,6 +61,7 @@ async fn read_message_history(
             messages.id, 
             messages.content, 
             messages.created_at,
+            messages.attachments,
             users.name AS "author_username",
             users.avatar AS "author_avatar",
             users.id AS "author_id",
@@ -90,18 +95,25 @@ async fn read_message_history(
     let messages: Vec<Value> = messages
         .iter()
         .rev()
-        .map(|message| {
-            json!({
-                "id": message.id,
-                "content": message.content,
-                "created_at": message.created_at.to_string(),
-                "author": {
-                    "id": message.author_id,
-                    "username": message.author_username,
-                    "avatar": message.author_avatar,
-                    "nickname": message.author_nickname
-                }
-            })
+        .map(|record| {
+            let attachments = match record.attachments.clone() {
+                Some(some) => serde_json::from_value(some).ok(),
+                None => None,
+            };
+
+            let message = Message {
+                id: record.id.clone(),
+                content: record.content.clone(),
+                attachments,
+                created_at: DateTime::<Utc>::from_utc(record.created_at, Utc),
+                author: MessageAuthor {
+                    id: record.author_id.clone(),
+                    username: record.author_username.clone(),
+                    avatar: record.author_avatar.clone(),
+                },
+            };
+
+            serde_json::to_value(message).unwrap()
         })
         .collect();
 

@@ -1,8 +1,11 @@
 use futures::future::join_all;
-use serde_json::{json, Value};
-use sqlx::types::chrono::NaiveDateTime;
+use serde::Serialize;
+use serde_json::json;
 
-use crate::auth::user::{User, PublicUserInfo};
+use crate::{
+    auth::user::{PublicUserInfo, User},
+    messaging::message::Message,
+};
 
 use super::{
     consumer::EventConsumer,
@@ -15,6 +18,14 @@ pub struct EventConsumerManager {
     consumers: RwLock<ConsumerMap>,
 }
 
+#[derive(Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum Event<'l> {
+    ChannelListUpdate,
+    Message(&'l Message),
+    Typing { user: &'l PublicUserInfo },
+}
+
 impl EventConsumerManager {
     pub fn new() -> Self {
         Self {
@@ -22,7 +33,7 @@ impl EventConsumerManager {
         }
     }
 
-    pub async fn broadcast(&self, topic: &Topic, data: Value) {
+    pub async fn broadcast(&self, topic: &Topic, event: Event<'_>) {
         let consumers = self.consumers.read().unwrap();
         if let Some(consumers) = consumers.topic_to_cons.get(topic) {
             let mut futures = Vec::with_capacity(consumers.len());
@@ -32,7 +43,7 @@ impl EventConsumerManager {
                     consumer.socket.send(
                         json!({
                             "topic": topic,
-                            "event": data,
+                            "event": event,
                         })
                         .to_string(),
                     ),
@@ -65,31 +76,10 @@ impl EventConsumerManager {
             .unsubscribe(socket_id, topic)
     }
 
-    pub async fn notify_of_new_message(
-        &self,
-        user: &User,
-        channel_id: &str,
-        message_id: &str,
-        content: &str,
-        created_at: &NaiveDateTime,
-        author_nickname: Option<String>,
-    ) {
-        let payload = serde_json::json!({
-            "type": "message",
-            "id": message_id,
-            "author": {
-                "id": user.id,
-                "username": user.name,
-                "avatar": user.avatar,
-                "nickname": author_nickname,
-            },
-            "created_at": created_at.to_string(),
-            "content": content,
-        });
-
+    pub async fn notify_of_new_message(&self, channel_id: &str, message: &Message) {
         self.broadcast(
             &Topic::new(TopicType::Channel, channel_id.to_owned()),
-            payload,
+            Event::Message(message),
         )
         .await;
     }
@@ -97,7 +87,7 @@ impl EventConsumerManager {
     pub async fn notify_guild_channel_list_update(&self, guild_id: &str) {
         self.broadcast(
             &Topic::new(TopicType::Guild, guild_id.to_string()),
-            serde_json::json!({"type": "channel_list_update"}),
+            Event::ChannelListUpdate,
         )
         .await;
     }
@@ -105,11 +95,12 @@ impl EventConsumerManager {
     pub async fn send_typing(&self, channel_id: &str, user: &User) {
         let topic = Topic::new(TopicType::Channel, channel_id.to_string());
 
-        let data = json!({
-            "type": "typing", 
-            "user": PublicUserInfo::from(user.clone())
-        });
-
-        self.broadcast(&topic, data).await;
+        self.broadcast(
+            &topic,
+            Event::Typing {
+                user: &PublicUserInfo::from(user.clone()),
+            },
+        )
+        .await;
     }
 }

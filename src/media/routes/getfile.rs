@@ -1,3 +1,5 @@
+use std::fs::File;
+
 use actix_files::NamedFile;
 use actix_web::{error::ErrorNotFound, get, web::Path, Error, Responder};
 use serde::Deserialize;
@@ -21,7 +23,6 @@ pub async fn getfile(req: Path<FileIdentifierPath>) -> Result<impl Responder, Er
 
     let path = (*options::MEDIA_PATH).to_string() + "/" + &filename;
 
-    Ok(NamedFile::open_async(path)
-        .await
-        .map_err(|_| ErrorNotFound("not_found")))
+    let file = File::open(path).map_err(|_| ErrorNotFound("not_found"))?;
+    NamedFile::from_file(file, &req.filename).map_err(|_| ErrorNotFound("not_found"))
 }

@@ -10,7 +10,7 @@ use actix_web::{
 use futures::TryStreamExt;
 use log::warn;
 use nanoid::nanoid;
-use serde_json::{json, Value};
+use serde::{Deserialize, Serialize};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
 use crate::{
@@ -21,12 +21,31 @@ use crate::{
 
 const MAX_FILE_SIZE: usize = 250 * 1_000_000; // 250 MB
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UploadedFileInfo {
+    pub id: String,
+    pub name: String,
+    pub url: String,
+    pub r#type: UploadedFileType,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum UploadedFileType {
+    Blob,
+    Image,
+    Video,
+    Audio,
+    Text,
+}
+
 #[post("/media/upload")]
 pub async fn upload(
     _token: AccessToken,
     mut payload: Multipart,
     request: HttpRequest,
-) -> Result<Json<Value>, Error> {
+) -> Result<Json<UploadedFileInfo>, Error> {
     let payload_size = request
         .headers()
         .get("content-length")
@@ -48,16 +67,28 @@ pub async fn upload(
             continue;
         }
 
-        let file_name = content_disposition.get_filename().map(String::from);
-
-        let filename = match file_name.map(|v| clean_filename(v)).flatten() {
+        let filename = content_disposition.get_filename().map(String::from);
+        let filename = match filename.map(|v| clean_filename(v)).flatten() {
             Some(n) => n,
-            None => "unknown-".to_owned() + &nanoid!(5),
+            None => format!("file-{}", nanoid!(6)),
         };
 
         if filename.len() > 64 {
             return Err(ErrorBadRequest("filename_too_long"));
         }
+
+        // get the file type
+        use UploadedFileType::*;
+        let r#type: UploadedFileType = match field.content_type() {
+            Some(t) => match t.type_() {
+                mime::TEXT => Text,
+                mime::IMAGE => Image,
+                mime::AUDIO => Audio,
+                mime::VIDEO => Video,
+                _ => Blob,
+            },
+            None => Blob,
+        };
 
         let id = nanoid!();
         {
@@ -65,6 +96,7 @@ pub async fn upload(
 
             // final check for file name validity, just to be sure...
             if !FILENAME_REGEX.is_match(&filename) {
+                warn!("filename invalid after cleaning: `{}`", filename);
                 return Err(ErrorBadRequest("invalid_name"));
             }
 
@@ -78,11 +110,12 @@ pub async fn upload(
         }
 
         let url = format!("/api/media/{}/{}", id, filename);
-        return Ok(Json(json!({
-            "id": id,
-            "name": filename,
-            "url": url
-        })));
+        return Ok(Json(UploadedFileInfo {
+            id,
+            name: filename,
+            url,
+            r#type,
+        }));
     }
 
     return Err(ErrorBadRequest("missing_file_field"));

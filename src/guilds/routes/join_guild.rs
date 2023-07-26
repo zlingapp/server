@@ -1,7 +1,12 @@
-use actix_web::{get, error::{ErrorInternalServerError, ErrorBadRequest}, web::Redirect, Responder};
+use actix_web::{
+    error::{ErrorBadRequest, ErrorInternalServerError},
+    get,
+    web::Redirect,
+    Responder,
+};
 use log::warn;
 
-use crate::{db::DB, auth::{access_token::AccessToken}, guilds::routes::GuildPath};
+use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath};
 
 // todo: phase this out for invite system. btw, this is GET so people can go in their browser to join a guild
 #[get("/guilds/{guild_id}/join")]
