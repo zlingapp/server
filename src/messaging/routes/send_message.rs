@@ -8,7 +8,7 @@ use nanoid::nanoid;
 use serde::Deserialize;
 
 use actix_web::{
-    error::{ErrorInternalServerError, ErrorUnauthorized},
+    error::{ErrorInternalServerError, ErrorForbidden},
     Error, HttpResponse,
 };
 use log::warn;
@@ -58,12 +58,12 @@ async fn send_message(
 
     // permission check here
     let can_send = db
-        .can_user_send_message_in(&guild_id, &user.id, &channel_id)
+        .can_user_send_message_in(&user.id, &guild_id, &channel_id)
         .await
         .unwrap();
 
     if !can_send {
-        return Err(ErrorUnauthorized("access_denied"));
+        return Err(ErrorForbidden("access_denied"));
     }
 
     // serialize attachments list back to json

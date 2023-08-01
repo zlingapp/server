@@ -1,5 +1,5 @@
 use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized},
+    error::{ErrorBadRequest, ErrorInternalServerError, ErrorForbidden},
     post,
     web::{Json, Data},
     Error,
@@ -51,7 +51,7 @@ async fn create_channel(
         })?;
 
     if !user_in_guild {
-        return Err(ErrorUnauthorized("access_denied"));
+        return Err(ErrorForbidden("access_denied"));
     }
 
     if req.name.trim().is_empty() || !CHANNEL_NAME_REGEX.is_match(&req.name) {

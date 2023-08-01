@@ -130,7 +130,7 @@ impl FromRequest for VoiceClientEx {
                         rtc_token = Some(q.rtc_token.clone());
                     }
                     Err(_) => {
-                        return Err(ErrorUnauthorized("access_denied"));
+                        return Err(ErrorUnauthorized("authentication_required"));
                     }
                 }
             } else {
@@ -154,7 +154,7 @@ impl FromRequest for VoiceClientEx {
                     "no token and/or identity provided, denying access to {}",
                     req.path()
                 );
-                return Err(ErrorUnauthorized("access_denied"));
+                return Err(ErrorUnauthorized("authentication_required"));
             }
 
             // SAFETY: this is fine because of the
@@ -176,7 +176,7 @@ impl FromRequest for VoiceClientEx {
                     rtc_identity,
                     req.path()
                 );
-                return Err(ErrorUnauthorized("access_denied"));
+                return Err(ErrorUnauthorized("authentication_required"));
             }
 
             let client = client.unwrap();
@@ -187,7 +187,7 @@ impl FromRequest for VoiceClientEx {
                     client.identity,
                     req.path()
                 );
-                return Err(ErrorUnauthorized("access_denied"));
+                return Err(ErrorUnauthorized("authentication_required"));
             }
 
             if !trying_to_connect_to_ws && client.socket.read().unwrap().is_none() {

@@ -127,18 +127,18 @@ impl FromRequest for AccessToken {
                 .headers()
                 .get("Authorization")
                 .map(|v| v.to_str())
-                .ok_or(ErrorUnauthorized("access_denied"))?
-                .map_err(|_| ErrorUnauthorized("access_denied"))?;
+                .ok_or(ErrorUnauthorized("authentication_required"))?
+                .map_err(|_| ErrorUnauthorized("authentication_required"))?;
 
             // needs to be a Bearer token
             let token = auth_header
                 .strip_prefix("Bearer ")
-                .ok_or(ErrorUnauthorized("access_denied"))?;
+                .ok_or(ErrorUnauthorized("authentication_required"))?;
 
             // parse & validate the token
             let access_token: AccessToken = token
                 .parse()
-                .map_err(|_| ErrorUnauthorized("access_denied"))?;
+                .map_err(|_| ErrorUnauthorized("authentication_required"))?;
 
             Ok(access_token)
         })

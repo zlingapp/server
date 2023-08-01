@@ -85,7 +85,7 @@ impl FromRequest for UserEx {
                 })?
                 .map(|u| UserEx(u));
 
-            user.ok_or(ErrorUnauthorized("access_denied"))
+            user.ok_or(ErrorUnauthorized("authentication_required"))
         })
     }
 }

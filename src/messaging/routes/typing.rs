@@ -1,5 +1,5 @@
 use actix_web::{
-    error::ErrorUnauthorized,
+    error::ErrorForbidden,
     error::Error,
     post,
     web::{Data, Path},
@@ -18,11 +18,11 @@ pub async fn typing(
     let (guild_id, channel_id) = path.into_inner();
 
     if !db
-        .can_user_send_message_in(&guild_id, &user.id, &channel_id)
+        .can_user_send_message_in(&user.id, &guild_id, &channel_id)
         .await
         .unwrap()
     {
-        return Err(ErrorUnauthorized("access_denied"))
+        return Err(ErrorForbidden("access_denied"))
     }
 
     ecm.send_typing(&channel_id, &user).await;

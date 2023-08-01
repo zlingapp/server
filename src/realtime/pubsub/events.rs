@@ -52,10 +52,10 @@ pub async fn events_ws(
     let token = match query.auth.parse::<Token>() {
         Ok(token) => AccessToken::from_existing(token),
         Err(_) => {
-            return Err(ErrorUnauthorized("access_denied"));
+            return Err(ErrorUnauthorized("authentication_required"));
         }
     }
-    .ok_or(ErrorUnauthorized("access_denied"))?;
+    .ok_or(ErrorUnauthorized("authentication_required"))?;
 
     let on_message_handler: Box<dyn Fn(String) + Send + Sync + 'static>;
     let on_close_handler;

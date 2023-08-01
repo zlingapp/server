@@ -1,5 +1,5 @@
 use actix_web::post;
-use actix_web::{error::ErrorUnauthorized, web::Json, Error, HttpRequest, HttpResponse};
+use actix_web::{error::ErrorForbidden, web::Json, Error, HttpRequest, HttpResponse};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -31,7 +31,7 @@ pub async fn login(
 
     use crate::auth::token_issuing::IssueRefreshTokenResult::*;
     match auth_result {
-        Failure => Err(ErrorUnauthorized("access_denied")),
+        Failure => Err(ErrorForbidden("access_denied")),
         Success {
             user,
             access_token,

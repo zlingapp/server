@@ -1,28 +1,30 @@
-use std::{collections::HashMap, sync::Mutex, env};
+use std::{collections::HashMap, env, sync::Mutex};
 
-use actix_web::{web::Data, App, HttpServer};
+use actix_web::{
+    web::{self, Data},
+    App, HttpServer,
+};
 use db::Database;
 use log::{error, info};
 use mediasoup::worker_manager::WorkerManager;
 use sqlx::postgres::PgPoolOptions;
 use voice::{VoiceChannels, VoiceClients};
 
-use crate::{
-    db::DB, realtime::pubsub::consumer_manager::EventConsumerManager,
-};
+use crate::{db::DB, realtime::pubsub::consumer_manager::EventConsumerManager};
 
 mod auth;
 mod channels;
 mod crypto;
 mod db;
 mod guilds;
+mod media;
 mod messaging;
 mod options;
 mod realtime;
+mod security;
+mod settings;
 mod util;
 mod voice;
-mod media;
-mod settings;
 
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
 
@@ -94,9 +96,14 @@ async fn main() -> std::io::Result<()> {
             // file uploads
             .configure(media::routes::configure_app)
             .configure(settings::routes::configure_app)
+            .default_service(web::route().to(api_endpoint_not_found))
     })
     .workers(2)
     .bind("127.0.0.1:8080")?
     .run()
     .await
+}
+
+async fn api_endpoint_not_found() -> actix_web::HttpResponse {
+    actix_web::HttpResponse::NotFound().body("api_endpoint_not_found")
 }

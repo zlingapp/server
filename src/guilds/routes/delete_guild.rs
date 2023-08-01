@@ -1,6 +1,6 @@
 use actix_web::{
     delete,
-    error::{ErrorInternalServerError, ErrorUnauthorized},
+    error::{ErrorInternalServerError, ErrorForbidden},
     HttpResponse,
 };
 use log::warn;
@@ -29,7 +29,7 @@ pub async fn delete_guild(
     .rows_affected();
 
     if rows_affected == 0 {
-        return Err(ErrorUnauthorized("access_denied"));
+        return Err(ErrorForbidden("access_denied"));
     }
 
     Ok(HttpResponse::Ok().body("success"))

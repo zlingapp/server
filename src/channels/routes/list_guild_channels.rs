@@ -1,5 +1,5 @@
 use actix_web::{
-    error::{ErrorInternalServerError, ErrorUnauthorized},
+    error::{ErrorInternalServerError, ErrorForbidden},
     get,
     web::Json,
     Error,
@@ -39,7 +39,7 @@ async fn list_guild_channels(
         })?;
 
     if !user_in_guild {
-        return Err(ErrorUnauthorized("access_denied"));
+        return Err(ErrorForbidden("access_denied"));
     }
 
     let channels = sqlx::query_as!(

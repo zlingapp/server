@@ -21,8 +21,13 @@ pub struct EventConsumerManager {
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Event<'l> {
+    /// Something changed in the list of channels in a guild.
     ChannelListUpdate,
+    /// A new message was sent.
     Message(&'l Message),
+    /// A message was deleted.
+    DeleteMessage { id: &'l str },
+    /// A user started typing in a channel.
     Typing { user: &'l PublicUserInfo },
 }
 
@@ -102,5 +107,12 @@ impl EventConsumerManager {
             },
         )
         .await;
+    }
+
+    pub async fn notify_message_deleted(&self, channel_id: &str, message_id: &str) {
+        let topic = Topic::new(TopicType::Channel, channel_id.to_string());
+
+        self.broadcast(&topic, Event::DeleteMessage { id: message_id })
+            .await;
     }
 }

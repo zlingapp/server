@@ -1,5 +1,5 @@
 use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized},
+    error::{ErrorBadRequest, ErrorInternalServerError, ErrorForbidden},
     get,
     web::{Path, Query},
     Error, HttpResponse,
@@ -34,12 +34,12 @@ async fn read_message_history(
     let (guild_id, channel_id) = path.into_inner();
 
     let can_read = db
-        .can_user_read_message_history_from(&guild_id, &token.user_id, &channel_id)
+        .can_user_read_message_history_from(&token.user_id, &guild_id, &channel_id)
         .await
         .unwrap();
 
     if !can_read {
-        return Err(ErrorUnauthorized("access_denied"));
+        return Err(ErrorForbidden("access_denied"));
     }
 
     let limit = req.limit.unwrap_or(MAX_MESSAGE_LIMIT);

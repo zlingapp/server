@@ -1,5 +1,5 @@
 use actix_web::{
-    error::{Error, ErrorUnauthorized},
+    error::{Error, ErrorForbidden},
     post,
     web::Json,
     HttpRequest, HttpResponse,
@@ -24,8 +24,8 @@ pub async fn reissue(
     let refresh_token: Token = body.refresh_token.parse().map_err(|e| {
         use crate::auth::token::TokenParseError::*;
         match e {
-            InvalidFormat => ErrorUnauthorized("access_denied"),
-            Expired => ErrorUnauthorized("token_expired"),
+            InvalidFormat => ErrorForbidden("access_denied"),
+            Expired => ErrorForbidden("token_expired"),
         }
     })?;
 
@@ -46,6 +46,6 @@ pub async fn reissue(
             "accessToken": access_token.to_string(),
             "refreshToken": refresh_token.to_string(),
         }))),
-        Failure => Err(ErrorUnauthorized("access_denied")),
+        Failure => Err(ErrorForbidden("access_denied")),
     }
 }
