@@ -67,7 +67,7 @@ pub async fn connect_transport(
         .as_ref()
         .ok_or_else(|| {
             warn!(
-                "client[{:?}]: tried to connect transport {:?} creating it",
+                "client[{:?}]: tried to connect transport {:?} before creating it",
                 client.identity, query.transport_type
             );
             TransportNotCreated
