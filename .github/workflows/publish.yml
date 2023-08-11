@@ -4,7 +4,7 @@ run-name: "Publish ${{ github.ref_name }} to GitHub Packages"
 on:
   push:
     branches:
-      - "release"
+      - "staging"
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
