@@ -547,39 +547,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "chat-server"
-version = "0.1.0"
-dependencies = [
- "actix-files",
- "actix-multipart",
- "actix-rt",
- "actix-web",
- "actix-ws",
- "anyhow",
- "base64-url",
- "chrono",
- "derive_more",
- "env_logger",
- "futures",
- "hex",
- "hmac",
- "lazy_static",
- "log",
- "mediasoup",
- "mime",
- "nanoid",
- "rand",
- "regex",
- "rust-argon2",
- "serde",
- "serde_json",
- "sha2",
- "sqlx",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -845,6 +812,9 @@ name = "either"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "encoding_rs"
@@ -2099,9 +2069,11 @@ dependencies = [
  "dotenvy",
  "either",
  "heck",
+ "hex",
  "once_cell",
  "proc-macro2",
  "quote",
+ "serde",
  "serde_json",
  "sha2",
  "sqlx-core",
@@ -2704,6 +2676,39 @@ name = "windows_x86_64_msvc"
 version = "0.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a515f5799fe4961cb532f983ce2b23082366b898e52ffbce459c86f67c8378a"
+
+[[package]]
+name = "zling-server"
+version = "0.1.0"
+dependencies = [
+ "actix-files",
+ "actix-multipart",
+ "actix-rt",
+ "actix-web",
+ "actix-ws",
+ "anyhow",
+ "base64-url",
+ "chrono",
+ "derive_more",
+ "env_logger",
+ "futures",
+ "hex",
+ "hmac",
+ "lazy_static",
+ "log",
+ "mediasoup",
+ "mime",
+ "nanoid",
+ "rand",
+ "regex",
+ "rust-argon2",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "tokio",
+ "uuid",
+]
 
 [[package]]
 name = "zstd"
