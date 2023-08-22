@@ -33,7 +33,7 @@ pub struct RegisterRequest {
         (status = CONFLICT, description = "User Already Exists", example = "already_exists"),
         (status = OK, description = "Registration Successful", example = "success")
     ),
-    tag = "auth"
+    tag = "identity"
 )]
 #[post("/auth/register")]
 pub async fn register(db: DB, req: Json<RegisterRequest>) -> Result<HttpResponse, Error> {

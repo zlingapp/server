@@ -9,7 +9,7 @@ use crate::auth::user::{User, UserEx};
     responses(
         (status = OK, body = User)
     ),
-    tag = "auth"
+    tag = "identity"
 )]
 #[get("/auth/whoami")]
 pub async fn whoami(user: UserEx) -> Json<User> {

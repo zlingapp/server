@@ -17,7 +17,7 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
 #[derive(OpenApi)]
 #[openapi(
     tags(
-        (name = "auth", description = "Authentication")
+        (name = "identity")
     ),
     paths(
         login::login,

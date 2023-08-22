@@ -38,7 +38,7 @@ pub struct LoginResponese {
         (status = FORBIDDEN, description = "Invalid Credentials", example = "access_denied"),
         (status = OK, description = "Login Successful", body = LoginResponese)
     ),
-    tag = "auth"
+    tag = "identity"
 )]
 #[post("/auth/login")]
 pub async fn login(

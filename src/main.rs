@@ -109,7 +109,11 @@ async fn main() -> std::io::Result<()> {
             .configure(settings::routes::configure_app)
             .default_service(web::route().to(api_endpoint_not_found))
             // OpenAPI docs
-            .service(RapiDoc::with_openapi("/openapi.json", oapi).path("/docs"))
+            .service(
+                RapiDoc::with_openapi("/openapi.json", oapi)
+                    .custom_html(include_str!("../res/rapidoc.html"))
+                    .path("/docs"),
+            )
     })
     .workers(2)
     .bind("127.0.0.1:8080")?
@@ -118,8 +122,10 @@ async fn main() -> std::io::Result<()> {
 }
 
 async fn api_endpoint_not_found() -> actix_web::HttpResponse {
-    actix_web::HttpResponse::NotFound().content_type("text/html").body(
-        r#"
+    actix_web::HttpResponse::NotFound()
+        .content_type("text/html")
+        .body(
+            r#"
             <h2>404 Not Found</h2>
             <h5>Zling API</h5>
             <p>The requested API endpoint was not found.</p>
@@ -131,5 +137,5 @@ async fn api_endpoint_not_found() -> actix_web::HttpResponse {
                 }
             </style>
         "#,
-    )
+        )
 }

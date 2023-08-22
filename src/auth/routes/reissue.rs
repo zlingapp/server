@@ -34,7 +34,7 @@ pub struct ReissueResponse {
         (status = FORBIDDEN, description = "Invalid Refresh Token", example = "access_denied"),
         (status = OK, description = "Renew Successful Successful", body = ReissueResponse)
     ),
-    tag = "auth"
+    tag = "identity"
 )]
 #[post("/auth/reissue")]
 pub async fn reissue(
