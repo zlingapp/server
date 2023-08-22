@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use actix_web::{
     error::{ErrorBadRequest, ErrorInternalServerError},
     get,
