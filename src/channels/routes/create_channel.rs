@@ -9,19 +9,22 @@ use log::warn;
 use nanoid::nanoid;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::{
     auth::access_token::AccessToken, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath, realtime::pubsub::consumer_manager::EventConsumerManager,
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateChannelRequest {
+    #[schema(example = "memes")]
     name: String,
     r#type: ChannelType,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct CreateChannelResponse {
+    #[schema(example = "jqNNyhSbOl1AwqCTMAZ2G")]
     id: String,
 }
 
@@ -31,6 +34,19 @@ lazy_static! {
     static ref CHANNEL_NAME_REGEX: Regex = Regex::new(r"^[\x20-\x7E]{1,16}$").unwrap();
 }
 
+/// Create Channel
+/// 
+/// Creates a voice or text channel in a guild. This endpoint requires the user
+/// to be in the guild of the channel, and have sufficient permissions to create
+/// a channel.
+#[utoipa::path(
+    responses(
+        (status = FORBIDDEN, description = "Access Denied", example = "access_denied"),
+        (status = BAD_REQUEST, description = "Invalid Channel Name", example = "invalid_name"),
+        (status = OK, description = "Channel Created Successfully", body = CreateChannelResponse)
+    ),
+    tag = "channels"
+)]
 #[post("/guilds/{guild_id}/channels")]
 async fn create_channel(
     db: DB,

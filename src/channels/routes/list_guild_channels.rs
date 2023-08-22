@@ -6,27 +6,39 @@ use actix_web::{
 };
 use log::warn;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::{
     auth::access_token::AccessToken, channels::channel::ChannelType, db::DB,
     guilds::routes::GuildPath,
 };
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ChannelInfo {
+    #[schema(example = "jqNNyhSbOl1AwqCTMAZ2G")]
     pub id: String,
+    #[schema(example = "memes")]
     pub name: String,
     pub r#type: ChannelType,
 }
 
-pub type ListChannelsResponse = Vec<ChannelInfo>;
-
+/// List Guild Channels
+/// 
+/// List all channels in a guild. This endpoint requires the user to be in the
+/// guild of the channel, and have sufficient permissions to view the channel.
+#[utoipa::path(
+    responses(
+        (status = FORBIDDEN, description = "Access Denied", example = "access_denied"),
+        (status = OK, description = "Channel List", body = Vec<ChannelInfo>)
+    ),
+    tag = "channels"
+)]
 #[get("/guilds/{guild_id}/channels")]
 async fn list_guild_channels(
     db: DB,
     token: AccessToken,
     path: GuildPath,
-) -> Result<Json<ListChannelsResponse>, Error> {
+) -> Result<Json<Vec<ChannelInfo>>, Error> {
     let user_in_guild = db
         .is_user_in_guild(&token.user_id, &path.guild_id)
         .await

@@ -37,4 +37,4 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
         register::RegisterRequest,
     ))
 )]
-pub(crate) struct AuthApiDocs;
+pub struct AuthApiDocs;

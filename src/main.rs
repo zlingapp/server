@@ -12,7 +12,10 @@ use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use voice::{VoiceChannels, VoiceClients};
 
-use crate::{db::DB, realtime::pubsub::consumer_manager::EventConsumerManager};
+use crate::{
+    channels::routes::ChannelsApiDocs, db::DB,
+    realtime::pubsub::consumer_manager::EventConsumerManager,
+};
 
 mod auth;
 mod channels;
@@ -82,6 +85,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let mut oapi = ApiDoc::openapi();
         oapi.merge(AuthApiDocs::openapi());
+        oapi.merge(ChannelsApiDocs::openapi());
 
         App::new()
             // logging
