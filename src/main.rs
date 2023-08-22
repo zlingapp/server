@@ -14,7 +14,7 @@ use voice::{VoiceChannels, VoiceClients};
 
 use crate::{
     channels::routes::ChannelsApiDocs, db::DB,
-    realtime::pubsub::consumer_manager::EventConsumerManager,
+    realtime::pubsub::consumer_manager::EventConsumerManager, guilds::routes::GuildsApiDocs,
 };
 
 mod auth;
@@ -86,6 +86,7 @@ async fn main() -> std::io::Result<()> {
         let mut oapi = ApiDoc::openapi();
         oapi.merge(AuthApiDocs::openapi());
         oapi.merge(ChannelsApiDocs::openapi());
+        oapi.merge(GuildsApiDocs::openapi());
 
         App::new()
             // logging

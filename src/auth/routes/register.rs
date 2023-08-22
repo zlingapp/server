@@ -30,8 +30,8 @@ pub struct RegisterRequest {
 /// Does not log the user in automatically, please use the login endpoint for that
 #[utoipa::path(
     responses(
-        (status = CONFLICT, description = "User Already Exists", example = "already_exists"),
-        (status = OK, description = "Registration Successful", example = "success")
+        (status = CONFLICT, description = "User with that email already exists", example = "already_exists"),
+        (status = OK, description = "Registration successful", example = "success")
     ),
     tag = "identity"
 )]

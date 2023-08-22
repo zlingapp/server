@@ -7,7 +7,7 @@ use crate::auth::access_token::AccessToken;
 /// Invalidate the current access token and log out.
 #[utoipa::path(
     responses(
-        (status = OK, description = "Logout Successful", example = "success")
+        (status = OK, description = "Logout successful", example = "success")
     ),
     tag = "identity"
 )]

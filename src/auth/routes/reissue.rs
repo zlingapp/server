@@ -31,8 +31,8 @@ pub struct ReissueResponse {
 /// note that the old refresh token is invalidated.
 #[utoipa::path(
     responses(
-        (status = FORBIDDEN, description = "Invalid Refresh Token", example = "access_denied"),
-        (status = OK, description = "Renew Successful Successful", body = ReissueResponse)
+        (status = FORBIDDEN, description = "Invalid or expired refresh token", example = "access_denied"),
+        (status = OK, description = "Renew successful", body = ReissueResponse)
     ),
     tag = "identity"
 )]

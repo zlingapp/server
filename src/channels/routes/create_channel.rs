@@ -41,9 +41,9 @@ lazy_static! {
 /// a channel.
 #[utoipa::path(
     responses(
-        (status = FORBIDDEN, description = "Access Denied", example = "access_denied"),
-        (status = BAD_REQUEST, description = "Invalid Channel Name", example = "invalid_name"),
-        (status = OK, description = "Channel Created Successfully", body = CreateChannelResponse)
+        (status = FORBIDDEN, description = "No permission to create channel", example = "access_denied"),
+        (status = BAD_REQUEST, description = "Invalid channel name", example = "invalid_name"),
+        (status = OK, description = "Channel created successfully", body = CreateChannelResponse)
     ),
     tag = "channels"
 )]

@@ -28,8 +28,8 @@ pub struct ChannelInfo {
 /// guild of the channel, and have sufficient permissions to view the channel.
 #[utoipa::path(
     responses(
-        (status = FORBIDDEN, description = "Access Denied", example = "access_denied"),
-        (status = OK, description = "Channel List", body = Vec<ChannelInfo>)
+        (status = FORBIDDEN, description = "No permission to view channel", example = "access_denied"),
+        (status = OK, description = "Channel list", body = Vec<ChannelInfo>)
     ),
     tag = "channels"
 )]

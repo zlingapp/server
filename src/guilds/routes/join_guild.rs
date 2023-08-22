@@ -8,7 +8,25 @@ use log::warn;
 
 use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath};
 
-// todo: phase this out for invite system. btw, this is GET so people can go in their browser to join a guild
+// todo: phase this out for invite system. btw, this is GET so people can go in
+// their browser to join a guild
+
+/// Join a Guild
+/// 
+/// This endpoint requires the user to not be in the guild already. For now, this
+/// is a temporary endpoint until the invite system is implemented, so it has
+/// been marked as deprecated.
+/// 
+/// Temporarily redirects to `/` on success. This is so the browser redirects
+/// back to `/` after joining a guild, so invite links could sort of work.
+#[utoipa::path(
+    responses(
+        (status = BAD_REQUEST, description = "Failed to join guild", example = "join_invalid"),
+        (status = SEE_OTHER, description = "Joined guild successfully, redirect to /")
+    ),
+    tag = "guilds"
+)]
+#[deprecated]
 #[get("/guilds/{guild_id}/join")]
 pub async fn join_guild(
     db: DB,

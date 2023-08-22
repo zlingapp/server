@@ -35,8 +35,8 @@ pub struct LoginResponese {
 /// expires at the reissue endpoint.
 #[utoipa::path(
     responses(
-        (status = FORBIDDEN, description = "Invalid Credentials", example = "access_denied"),
-        (status = OK, description = "Login Successful", body = LoginResponese)
+        (status = FORBIDDEN, description = "Invalid username or password", example = "access_denied"),
+        (status = OK, description = "Login successful", body = LoginResponese)
     ),
     tag = "identity"
 )]
