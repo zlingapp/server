@@ -25,7 +25,8 @@ pub struct GuildInfo {
     responses(
         (status = OK, description = "Guild list", body = Vec<GuildInfo>)
     ),
-    tag = "guilds"
+    tag = "guilds",
+    security(("token" = []))
 )]
 #[get("/guilds")]
 pub async fn list_joined_guilds(

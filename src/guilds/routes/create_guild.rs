@@ -39,7 +39,8 @@ pub struct CreateGuildResponse {
         (status = BAD_REQUEST, description = "Invalid guild name", example = "invalid_icon"),
         (status = OK, description = "Guild created successfully", body = CreateGuildResponse)
     ),
-    tag = "guilds"
+    tag = "guilds",
+    security(("token" = []))
 )]
 #[post("/guilds")]
 pub async fn create_guild(

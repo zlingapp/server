@@ -9,7 +9,8 @@ use crate::auth::access_token::AccessToken;
     responses(
         (status = OK, description = "Logout successful", example = "success")
     ),
-    tag = "identity"
+    tag = "identity",
+    security(("token" = []))
 )]
 #[get("/auth/logout")]
 pub async fn logout(_token: AccessToken) -> Result<HttpResponse, Error> {

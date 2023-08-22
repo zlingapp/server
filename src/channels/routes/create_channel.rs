@@ -1,7 +1,7 @@
 use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError, ErrorForbidden},
+    error::{ErrorBadRequest, ErrorForbidden, ErrorInternalServerError},
     post,
-    web::{Json, Data},
+    web::{Data, Json},
     Error,
 };
 use lazy_static::lazy_static;
@@ -11,8 +11,10 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::guilds::routes::GuildIdParams;
 use crate::{
-    auth::access_token::AccessToken, channels::channel::ChannelType, db::DB, guilds::routes::GuildPath, realtime::pubsub::consumer_manager::EventConsumerManager,
+    auth::access_token::AccessToken, channels::channel::ChannelType, db::DB,
+    guilds::routes::GuildPath, realtime::pubsub::consumer_manager::EventConsumerManager,
 };
 
 #[derive(Deserialize, ToSchema)]
@@ -35,17 +37,19 @@ lazy_static! {
 }
 
 /// Create Channel
-/// 
+///
 /// Creates a voice or text channel in a guild. This endpoint requires the user
 /// to be in the guild of the channel, and have sufficient permissions to create
 /// a channel.
 #[utoipa::path(
+    params(GuildIdParams),
     responses(
         (status = FORBIDDEN, description = "No permission to create channel", example = "access_denied"),
         (status = BAD_REQUEST, description = "Invalid channel name", example = "invalid_name"),
         (status = OK, description = "Channel created successfully", body = CreateChannelResponse)
     ),
-    tag = "channels"
+    tag = "channels",
+    security(("token" = []))
 )]
 #[post("/guilds/{guild_id}/channels")]
 async fn create_channel(

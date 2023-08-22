@@ -1,6 +1,6 @@
 use actix_web::web::Path;
 use serde::Deserialize;
-use utoipa::OpenApi;
+use utoipa::{OpenApi, IntoParams};
 
 pub mod create_guild;
 pub mod delete_guild;
@@ -8,12 +8,12 @@ pub mod join_guild;
 pub mod list_joined_guilds;
 pub mod update_guild;
 
-#[derive(Deserialize)]
-pub struct GuildPathInner {
+#[derive(Deserialize, IntoParams)]
+pub struct GuildIdParams {
     pub guild_id: String,
 }
 
-pub type GuildPath = Path<GuildPathInner>;
+pub type GuildPath = Path<GuildIdParams>;
 
 pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(create_guild::create_guild)

@@ -12,11 +12,9 @@ use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use voice::{VoiceChannels, VoiceClients};
 
-use crate::{
-    channels::routes::ChannelsApiDocs, db::DB,
-    realtime::pubsub::consumer_manager::EventConsumerManager, guilds::routes::GuildsApiDocs,
-};
+use crate::{db::DB, realtime::pubsub::consumer_manager::EventConsumerManager};
 
+mod apidocs;
 mod auth;
 mod channels;
 mod crypto;
@@ -30,8 +28,6 @@ mod security;
 mod settings;
 mod util;
 mod voice;
-
-use auth::routes::AuthApiDocs;
 
 // shortcut to make a Mutexed String to T hashmap
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
@@ -83,10 +79,7 @@ async fn main() -> std::io::Result<()> {
     let event_manager = Data::new(EventConsumerManager::new());
 
     HttpServer::new(move || {
-        let mut oapi = ApiDoc::openapi();
-        oapi.merge(AuthApiDocs::openapi());
-        oapi.merge(ChannelsApiDocs::openapi());
-        oapi.merge(GuildsApiDocs::openapi());
+        let oapi = apidocs::setup_oapi();
 
         App::new()
             // logging

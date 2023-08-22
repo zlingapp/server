@@ -12,6 +12,7 @@ use crate::{
     auth::access_token::AccessToken, channels::channel::ChannelType, db::DB,
     guilds::routes::GuildPath,
 };
+use crate::guilds::routes::GuildIdParams;
 
 #[derive(Serialize, ToSchema)]
 pub struct ChannelInfo {
@@ -27,11 +28,13 @@ pub struct ChannelInfo {
 /// List all channels in a guild. This endpoint requires the user to be in the
 /// guild of the channel, and have sufficient permissions to view the channel.
 #[utoipa::path(
+    params(GuildIdParams),
     responses(
         (status = FORBIDDEN, description = "No permission to view channel", example = "access_denied"),
         (status = OK, description = "Channel list", body = Vec<ChannelInfo>)
     ),
-    tag = "channels"
+    tag = "channels",
+    security(("token" = []))
 )]
 #[get("/guilds/{guild_id}/channels")]
 async fn list_guild_channels(

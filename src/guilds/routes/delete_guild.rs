@@ -6,16 +6,19 @@ use actix_web::{
 use log::warn;
 
 use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath};
+use crate::guilds::routes::GuildIdParams;
 
 /// Delete a Guild
 /// 
 /// This endpoint requires the user to be the owner of the guild.
 #[utoipa::path(
+    params(GuildIdParams),
     responses(
         (status = FORBIDDEN, description = "Not the owner of the guild", example = "access_denied"),
         (status = OK, description = "Guild deleted successfully", example = "success")
     ),
-    tag = "guilds"
+    tag = "guilds",
+    security(("token" = []))
 )]
 #[delete("/guilds/{guild_id}")]
 pub async fn delete_guild(
