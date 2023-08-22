@@ -2,11 +2,14 @@ use actix_web::{get, web::Json};
 
 use crate::auth::user::{User, UserEx};
 
+/// Who am I?
+/// 
+/// Get the current user.
 #[utoipa::path(
-    get, path = "/auth/whoami",
     responses(
         (status = OK, body = User)
-    )
+    ),
+    tag = "auth"
 )]
 #[get("/auth/whoami")]
 pub async fn whoami(user: UserEx) -> Json<User> {

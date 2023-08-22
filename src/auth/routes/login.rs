@@ -7,6 +7,7 @@ use crate::auth::access_token::AccessToken;
 use crate::auth::token::Token;
 use crate::auth::user::User;
 use crate::db::DB;
+use crate::util::use_display;
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
@@ -20,19 +21,24 @@ pub struct LoginRequest {
 #[serde(rename_all = "camelCase")]
 pub struct LoginResponese {
     user: User,
-    #[serde(serialize_with = "crate::util::use_display")]
+    #[serde(serialize_with = "use_display")]
     access_token: AccessToken,
-    #[serde(serialize_with = "crate::util::use_display")]
+    #[serde(serialize_with = "use_display")]
     refresh_token: Token,
 }
 
+/// Log in
+/// 
+/// Log in using an email address and password and get an access token and refresh token
+/// as well as a new `User` object. You may use the access token to authenticate yourself
+/// for other endpoints, and the refresh token to get a new access token when the old one
+/// expires at the reissue endpoint.
 #[utoipa::path(
-    post, 
-    path = "/auth/login",
     responses(
         (status = FORBIDDEN, description = "Invalid Credentials", example = "access_denied"),
         (status = OK, description = "Login Successful", body = LoginResponese)
-    )
+    ),
+    tag = "auth"
 )]
 #[post("/auth/login")]
 pub async fn login(

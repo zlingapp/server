@@ -1,10 +1,10 @@
-use utoipa::{OpenApi, openapi};
+use utoipa::OpenApi;
 
 pub mod login;
 pub mod logout;
 pub mod register;
-pub mod whoami;
 pub mod reissue;
+pub mod whoami;
 
 pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(login::login)
@@ -16,6 +16,25 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(whoami::whoami),
+    tags(
+        (name = "auth", description = "Authentication")
+    ),
+    paths(
+        login::login,
+        logout::logout,
+        reissue::reissue,
+        register::register,
+        whoami::whoami
+    ),
+    components(schemas(
+        super::user::User,
+        super::token::Token,
+        super::access_token::AccessToken,
+        login::LoginRequest,
+        login::LoginResponese,
+        reissue::ReissueRequest,
+        reissue::ReissueResponse,
+        register::RegisterRequest,
+    ))
 )]
-pub(crate) struct SpecialApi;
+pub(crate) struct AuthApiDocs;

@@ -28,22 +28,13 @@ mod settings;
 mod util;
 mod voice;
 
-use auth::routes::SpecialApi;
+use auth::routes::AuthApiDocs;
 
 // shortcut to make a Mutexed String to T hashmap
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(auth::routes::login::login),
-    components(schemas(
-        auth::user::User,
-        auth::token::Token,
-        auth::access_token::AccessToken,
-        auth::routes::login::LoginRequest,
-        auth::routes::login::LoginResponese
-    ))
-)]
+#[openapi()]
 struct ApiDoc;
 
 #[actix_web::main]
@@ -90,7 +81,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         let mut oapi = ApiDoc::openapi();
-        oapi.merge(SpecialApi::openapi());
+        oapi.merge(AuthApiDocs::openapi());
 
         App::new()
             // logging
@@ -127,5 +118,18 @@ async fn main() -> std::io::Result<()> {
 }
 
 async fn api_endpoint_not_found() -> actix_web::HttpResponse {
-    actix_web::HttpResponse::NotFound().body("api_endpoint_not_found")
+    actix_web::HttpResponse::NotFound().content_type("text/html").body(
+        r#"
+            <h2>404 Not Found</h2>
+            <h5>Zling API</h5>
+            <p>The requested API endpoint was not found.</p>
+            <a href="/docs">View API Documentation</a>
+            <style>
+                body {
+                    font-family: sans-serif;
+                    text-align: center;
+                }
+            </style>
+        "#,
+    )
 }
