@@ -5,6 +5,7 @@ use actix_web::FromRequest;
 use chrono::{Utc, DateTime};
 use derive_more::{Display, Error};
 use futures::Future;
+use utoipa::ToSchema;
 
 use crate::{crypto, options::TOKEN_SIGNING_KEY};
 
@@ -43,7 +44,7 @@ use super::token_issuing::ACCESS_TOKEN_VALIDITY;
 /// let parsed_token = Token::from_str(&token_str).unwrap();
 /// assert_eq!(token, parsed_token);
 /// ```
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, ToSchema, Display)]
 pub struct AccessToken(Token);
 
 impl AccessToken {

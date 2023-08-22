@@ -8,6 +8,8 @@ use db::Database;
 use log::{error, info};
 use mediasoup::worker_manager::WorkerManager;
 use sqlx::postgres::PgPoolOptions;
+use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
 use voice::{VoiceChannels, VoiceClients};
 
 use crate::{db::DB, realtime::pubsub::consumer_manager::EventConsumerManager};
@@ -26,7 +28,23 @@ mod settings;
 mod util;
 mod voice;
 
+use auth::routes::SpecialApi;
+
+// shortcut to make a Mutexed String to T hashmap
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(auth::routes::login::login),
+    components(schemas(
+        auth::user::User,
+        auth::token::Token,
+        auth::access_token::AccessToken,
+        auth::routes::login::LoginRequest,
+        auth::routes::login::LoginResponese
+    ))
+)]
+struct ApiDoc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -71,7 +89,9 @@ async fn main() -> std::io::Result<()> {
     let event_manager = Data::new(EventConsumerManager::new());
 
     HttpServer::new(move || {
-        // add logging middleware
+        let mut oapi = ApiDoc::openapi();
+        oapi.merge(SpecialApi::openapi());
+
         App::new()
             // logging
             .wrap(actix_web::middleware::Logger::new("%{r}a %r -> %s in %Dms").log_target("http"))
@@ -97,6 +117,8 @@ async fn main() -> std::io::Result<()> {
             .configure(media::routes::configure_app)
             .configure(settings::routes::configure_app)
             .default_service(web::route().to(api_endpoint_not_found))
+            // OpenAPI docs
+            .service(RapiDoc::with_openapi("/openapi.json", oapi).path("/docs"))
     })
     .workers(2)
     .bind("127.0.0.1:8080")?

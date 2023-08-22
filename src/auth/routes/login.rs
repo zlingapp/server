@@ -1,16 +1,39 @@
 use actix_web::post;
 use actix_web::{error::ErrorForbidden, web::Json, Error, HttpRequest, HttpResponse};
-use serde::Deserialize;
-use serde_json::json;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
+use crate::auth::access_token::AccessToken;
+use crate::auth::token::Token;
+use crate::auth::user::User;
 use crate::db::DB;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
+    #[schema(example = "someone@example.com")]
     email: String,
+    #[schema(example = "hunter2")]
     password: String,
 }
 
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LoginResponese {
+    user: User,
+    #[serde(serialize_with = "crate::util::use_display")]
+    access_token: AccessToken,
+    #[serde(serialize_with = "crate::util::use_display")]
+    refresh_token: Token,
+}
+
+#[utoipa::path(
+    post, 
+    path = "/auth/login",
+    responses(
+        (status = FORBIDDEN, description = "Invalid Credentials", example = "access_denied"),
+        (status = OK, description = "Login Successful", body = LoginResponese)
+    )
+)]
 #[post("/auth/login")]
 pub async fn login(
     db: DB,
@@ -36,10 +59,10 @@ pub async fn login(
             user,
             access_token,
             refresh_token,
-        } => Ok(HttpResponse::Ok().json(json!({
-            "user": user,
-            "accessToken": access_token.to_string(),
-            "refreshToken": refresh_token.to_string(),
-        }))),
+        } => Ok(HttpResponse::Ok().json(LoginResponese{
+            user: user,
+            access_token: access_token,
+            refresh_token: refresh_token,
+        })),
     }
 }

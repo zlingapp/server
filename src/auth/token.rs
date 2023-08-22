@@ -1,11 +1,16 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::{Display, Error};
-use std::str::FromStr;
+use serde_json::json;
+use std::{fmt::Display, str::FromStr};
+use utoipa::{
+    openapi::{Object, RefOr, Schema, SchemaType},
+    ToSchema,
+};
 
-use super::user::UserId;
 #[derive(Debug, PartialEq, Eq)]
+// see impl of ToSchema below
 pub struct Token {
-    pub user_id: UserId,
+    pub user_id: String,
     pub expires: DateTime<Utc>, // utc
     pub proof: String,
 }
@@ -25,15 +30,27 @@ impl Token {
     }
 }
 
-impl ToString for Token {
+impl Display for Token {
     /// Serializes the token to a string.
     /// Signs the token using the `TOKEN_SIGNING_KEY`
-    fn to_string(&self) -> String {
-        // user id is not base64 encoded
-        // let user_id = base64_url::encode(&self.user_id);
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let expiry: [u8; 4] = (self.expires.timestamp() as u32).to_be_bytes();
         let expiry = base64_url::encode(&expiry);
-        format!("{}.{}.{}", self.user_id, expiry, self.proof)
+
+        f.write_fmt(format_args!("{}.{}.{}", self.user_id, expiry, self.proof))
+    }
+}
+
+/// OpenAPI schema that represents the token as a string
+impl ToSchema<'_> for Token {
+    fn schema() -> (
+        &'static str,
+        utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
+    ) {
+        let mut obj = Object::with_type(SchemaType::String);
+        obj.example = Some(json!("xoKM4W7NDqHjK_V0g9s3y.ZN7jGQ.iIuDsgiT4s2ehQ-3ATImimyPUoooTPC1ytqqQuPQSJU"));
+
+        ("Token", RefOr::T(Schema::Object(obj)))
     }
 }
 

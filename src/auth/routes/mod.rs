@@ -1,3 +1,5 @@
+use utoipa::{OpenApi, openapi};
+
 pub mod login;
 pub mod logout;
 pub mod register;
@@ -11,3 +13,9 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
         .service(register::register)
         .service(whoami::whoami);
 }
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(whoami::whoami),
+)]
+pub(crate) struct SpecialApi;

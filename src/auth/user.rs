@@ -7,31 +7,37 @@ use actix_web::FromRequest;
 
 use futures::Future;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::{auth::access_token::AccessToken, db::DB};
 
-pub type UserId = String;
-
-/// struct containing user info
-/// the email field shouldn't be known by users other than this user for privacy reasons
-/// only send this User struct to the user it references
-#[derive(Debug, Clone, Serialize)]
+/// User Account Information
+// the email field shouldn't be known by users other than this user for privacy reasons
+// only send this User struct to the user it references
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct User {
     // do not store sensitive information in here
     // this may be sent directly to the client
     // one example is the /whoami endpoint
-    pub id: UserId,
+    #[schema(example = "xoKM4W7NDqHjK_V0g9s3y")]
+    pub id: String,
+    #[schema(example = "someone#1234")]
     pub name: String,
+    #[schema(example = "/api/media/xoKM4W7NDqHjK_V0g9s3y/avatar.png")]
     pub avatar: String,
+    #[schema(example = "someone@example.com")]
     pub email: String,
 }
 
 // helper struct for representing user info to other users
 // the fields here should not be sensitive info, eg. email
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct PublicUserInfo {
-    pub id: UserId,
+    #[schema(example = "xoKM4W7NDqHjK_V0g9s3y")]
+    pub id: String,
+    #[schema(example = "someone#1234")]
     pub username: String,
+    #[schema(example = "/api/media/xoKM4W7NDqHjK_V0g9s3y/avatar.png")]
     pub avatar: String,
 }
 
