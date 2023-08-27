@@ -1,4 +1,4 @@
-use nanoid::nanoid;
+use super::routes::upload::random_file_name;
 
 /// Takes a filename and returns a cleaned version of it.
 ///
@@ -26,7 +26,10 @@ pub fn clean_filename(mut original: String) -> Option<String> {
     // extension is everything after the last dot
     let mut parts = original.split('.').collect::<Vec<&str>>();
 
-    // this entire part is needed because we need to handle the name
+    // this entire part is needed because we need to handle the extension
+    // separately from the name to preserve as much info as possible
+
+    // parse extension
     let mut extension = "";
     if parts.len() > 1 {
         extension = parts.last().unwrap_or(&"");
@@ -47,9 +50,10 @@ pub fn clean_filename(mut original: String) -> Option<String> {
     let mut result;
 
     if !name.contains(char::is_alphanumeric) {
-        // the entire name is made up of weird characters, which is bad
+        // there isn't a single normal character in the name, which is bad
+        // (someone is probably trying to break the name cleaner on purpose) so
         // make it a random string
-        result = format!("file-{}", nanoid!(6));
+        result = random_file_name();
     } else {
         let clean: String = name
             .chars()
@@ -64,6 +68,11 @@ pub fn clean_filename(mut original: String) -> Option<String> {
 
         // trim repeated whitespaces and replace them with a single underscore
         result = clean.split_whitespace().collect::<Vec<&str>>().join("_");
+    }
+
+    if result.len() + extension.len() > 64 {
+        // file name was too long
+        result = random_file_name();
     }
 
     // if we have a valid extension, append it
