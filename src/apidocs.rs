@@ -1,7 +1,7 @@
 use utoipa::{OpenApi, openapi::security::{SecurityScheme, HttpBuilder, HttpAuthScheme}};
 
 use crate::{
-    auth::routes::AuthApiDocs, channels::routes::ChannelsApiDocs, guilds::routes::GuildsApiDocs, media::routes::MediaApiDocs,
+    auth::routes::AuthApiDocs, channels::routes::ChannelsApiDocs, guilds::routes::GuildsApiDocs, media::routes::MediaApiDocs, messaging::routes::MessagingApiDocs,
 };
 
 #[derive(OpenApi)]
@@ -17,6 +17,7 @@ pub fn setup_oapi() -> utoipa::openapi::OpenApi {
     oapi.merge(ChannelsApiDocs::openapi());
     oapi.merge(GuildsApiDocs::openapi());
     oapi.merge(MediaApiDocs::openapi());
+    oapi.merge(MessagingApiDocs::openapi());
 
     oapi
 }

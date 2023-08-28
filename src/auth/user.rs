@@ -23,7 +23,7 @@ pub struct User {
     pub id: String,
     #[schema(example = "someone#1234")]
     pub name: String,
-    #[schema(example = "/api/media/xoKM4W7NDqHjK_V0g9s3y/avatar.png")]
+    #[schema(example = "/api/media/9ybevZcdBh-3Z2KRLBidT/avatar.png")]
     pub avatar: String,
     #[schema(example = "someone@example.com")]
     pub email: String,
@@ -37,7 +37,7 @@ pub struct PublicUserInfo {
     pub id: String,
     #[schema(example = "someone#1234")]
     pub username: String,
-    #[schema(example = "/api/media/xoKM4W7NDqHjK_V0g9s3y/avatar.png")]
+    #[schema(example = "/api/media/9ybevZcdBh-3Z2KRLBidT/avatar.png")]
     pub avatar: String,
 }
 
