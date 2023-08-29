@@ -7,6 +7,7 @@ use actix_web::{
 };
 use log::{error, info};
 use mediasoup::rtp_parameters::MediaKind;
+use serde::Deserialize;
 use serde_json::json;
 
 use crate::{
@@ -18,6 +19,70 @@ use crate::{
     }, auth::user::PublicUserInfo,
 };
 
+#[derive(Deserialize)]
+// note: cannot use IntoParams here as they are doomed to be path parameters
+// instead of query for some reason, "why" is beyond me
+pub struct IdAndToken {
+    /// RTC Identity
+    pub i: String,
+    /// RTC Token
+    pub t: String,
+}
+
+/// Voice WebSocket
+/// 
+/// Connect to this to receive real-time events about peers in the current voice
+/// chat. Connection is mandatory and must be made within 10 seconds of a
+/// `/voice/join` request.
+/// 
+/// As `WebSocket`s in the browser are unable to supply additional headers, the
+/// RTC Identity and Token must be sent in the query parameters of the intitial
+/// request, in the form `?i=identity` and `?t=token`.
+/// 
+/// ## Messages
+/// The connection is read-only, client to server signalling does not happen
+/// over this socket at all. These are the messages your client may receive and
+/// should respond to.
+/// 
+/// #### Peer Joined
+/// ```js
+/// {
+///     "type": "client_connected",
+///     "identity": "YDjdIc06vuaVQZy4LS7hb",
+///     "user": { ... }, // contains id, name, avatar, etc.
+/// }
+/// ```
+/// 
+/// #### Peer Disconnected
+/// ```js
+/// {
+///     "type": "client_disconnected",
+///     "identity": "YDjdIc06vuaVQZy4LS7hb",
+/// }
+/// ```
+/// 
+/// #### New Producer
+/// A peer created a new producer, you may consume it.
+/// ```js
+/// {
+///     "type": "new_producer",
+///     "identity": "YDjdIc06vuaVQZy4LS7hb",
+///     "producer_id": "...",
+///     "producer_kind": "audio|video",
+/// }
+/// ```
+#[utoipa::path(
+    tag = "voice",
+    security(("voice" = [])),
+    params(
+        ("i" = String, Query, description = "RTC Identity"),
+        ("t" = String, Query, description = "RTC Token"),
+    ),
+    responses(
+        (status = 101, description = "WebSocket connected successfully"),
+        (status = BAD_REQUEST, description = "Already connected"),
+    )
+)]
 #[get("/voice/ws")] // WARNING: before changing this path, make sure to change it in the client extractor!!!
 pub async fn voice_events_ws(
     client: VoiceClientEx,

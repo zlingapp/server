@@ -28,7 +28,7 @@ actix-multipart = "0.6.0"
 mime = "0.3.17"
 
 # openapi documentation
-utoipa = { version = "3.4.4", features = ["actix_extras", "chrono"] }
+utoipa = { version = "3.4.4", features = ["actix_extras", "chrono", "uuid"] }
 utoipa-rapidoc = { version = "0.1.0", features = ["actix-web"] }
 
 # utility

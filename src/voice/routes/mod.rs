@@ -1,3 +1,8 @@
+use utoipa::OpenApi;
+
+use self::{connect_transport::ConnectTransportRequest, consume::{ConsumeRequest, ConsumeReply}, create_transport::CreateTransportReply, list_vc_peers::ChannelMemberInfo, join_vc::JoinVcReply, produce::{ProduceReply, ProduceRequest}};
+use super::transport::TransportType;
+
 pub mod connect_transport;
 pub mod consume;
 pub mod create_transport;
@@ -17,3 +22,32 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
         .service(produce::handle_produce)
         .service(consume::handle_consume);
 }
+
+#[derive(OpenApi)]
+#[openapi(
+    tags(
+        (name = "voice")
+    ),
+    paths(
+        list_vc_peers::list_vc_peers,
+        join_vc::join_vc,
+        leave_vc::leave_vc,
+        voice_events::voice_events_ws,
+        create_transport::create_transport,
+        connect_transport::connect_transport,
+        produce::handle_produce,
+        consume::handle_consume,
+    ),
+    components(schemas(
+        ChannelMemberInfo,
+        JoinVcReply,
+        TransportType,
+        ConnectTransportRequest,
+        CreateTransportReply,
+        ConsumeRequest,
+        ConsumeReply,
+        ProduceRequest,
+        ProduceReply
+    ))
+)]
+pub struct VoiceApiDoc;

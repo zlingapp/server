@@ -10,6 +10,7 @@ use mediasoup::{
     transport::Transport,
 };
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 
 use crate::options::webrtc_transport_options;
 use crate::voice::{client::VoiceClientEx, transport::TransportType};
@@ -27,20 +28,27 @@ use crate::voice::{client::VoiceClientEx, transport::TransportType};
 /// This struct is used to deserialize the query string of the request.
 /// It contains the type of transport to create.
 /// In the URL, it looks like ?type=send or ?type=recv
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
 pub struct TransportTypeQuery {
+    #[param(style = Form)]
     #[serde(rename = "type")]
     pub transport_type: TransportType,
 }
 
-/// This is what the server will reply with when a transport is created.
-/// This should be enough for the client to create a counterpart to whatever transport it needs.
-#[derive(Debug, Serialize)]
+/// This is what the server will reply with when a transport is created. This
+/// should be enough for the client to create a counterpart to whatever
+/// transport it needs. You may feed this entire object into
+/// `device.createSendTransport` or `device.createRecvTransport`.
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateTransportReply {
+    #[schema(value_type = uuid::Uuid)]
     id: String,
+    #[schema(value_type = Object)]
     ice_parameters: IceParameters,
+    #[schema(value_type = Object)]
     ice_candidates: Vec<IceCandidate>,
+    #[schema(value_type = Object)]
     dtls_parameters: DtlsParameters,
 }
 
@@ -64,12 +72,27 @@ impl ResponseError for CreateTransportError {
 
 pub type CreateTransportResponse = Result<Json<CreateTransportReply>, CreateTransportError>;
 
-/// POST /transport/create
-///
-///     Creates a new transport. The type of transport is specified in the query string.
-///
-/// eg. /transport/create?type=send
-/// eg. /transport/create?type=recv
+/// Create WebRTC transport
+/// 
+/// Allocate a server-side client or serverbound mediasoup WebRTC transport. The
+/// direction of the transport is specified in the `type` parameter. You may
+/// only create one `send` or `recv` transport per voice connection, and any
+/// duplicate requests will be met with `409 Conflict`.
+/// 
+/// A call to create a transport should be followed by a call to connect the
+/// transport. To send voice data, you must create and connect a `send`
+/// transport. Conversely, to receive voice data, you must create and connect a
+/// `recv` transport.
+#[utoipa::path(
+    tag = "voice",
+    security(("voice" = [])),
+    params(TransportTypeQuery),
+    responses(
+        (status = OK, description = "Ready for you to start consuming", body = CreateTransportReply),
+        (status = CONFLICT, description = "Transport of this type already created"),
+        (status = INTERNAL_SERVER_ERROR, description = "Transport allocation failed on the serverside"),
+    )
+)]
 #[post("/voice/transport/create")]
 pub async fn create_transport(
     client: VoiceClientEx,
