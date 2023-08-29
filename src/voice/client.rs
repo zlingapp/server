@@ -15,13 +15,14 @@ use futures::Future;
 use log::{info, warn};
 use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcTransport};
 use nanoid::nanoid;
-use serde::Deserialize;
 
 use crate::{
     auth::{access_token::AccessToken, user::User},
     voice::{channel::VoiceChannel, MutexMap, VoiceClients},
 };
 use crate::{realtime::socket::Socket, util::constant_time_compare};
+
+use super::routes::voice_events::IdAndToken;
 
 pub struct VoiceClient {
     pub identity: String,
@@ -115,22 +116,16 @@ impl FromRequest for VoiceClientEx {
                 // rtc identity and token are in the query string for ws connections
                 // this is because the RTC-Identity and RTC-Token headers can't be set
                 // because WebSocket() in the browser doesn't allow setting request options! :D
-                #[derive(Deserialize)]
-                struct IdAndToken {
-                    #[serde(rename = "i")]
-                    rtc_identity: String,
-                    #[serde(rename = "t")]
-                    rtc_token: String,
-                }
                 let query = Query::<IdAndToken>::from_query(req.query_string());
 
                 match query {
                     Ok(q) => {
-                        rtc_identity = Some(q.rtc_identity.clone());
-                        rtc_token = Some(q.rtc_token.clone());
+                        rtc_identity = Some(q.i.clone());
+                        rtc_token = Some(q.t.clone());
                     }
                     Err(_) => {
-                        return Err(ErrorUnauthorized("authentication_required"));
+                        // trying to connect to ws but no credentials in query
+                        return Err(ErrorUnauthorized("voice_authentication_required"));
                     }
                 }
             } else {
@@ -154,10 +149,10 @@ impl FromRequest for VoiceClientEx {
                     "no token and/or identity provided, denying access to {}",
                     req.path()
                 );
-                return Err(ErrorUnauthorized("authentication_required"));
+                return Err(ErrorUnauthorized("voice_authentication_required"));
             }
 
-            // SAFETY: this is fine because of the
+            // SAFETY: this is fine because of the check above
             let rtc_identity = rtc_identity.unwrap();
             let rtc_token = rtc_token.unwrap();
 
@@ -176,7 +171,7 @@ impl FromRequest for VoiceClientEx {
                     rtc_identity,
                     req.path()
                 );
-                return Err(ErrorUnauthorized("authentication_required"));
+                return Err(ErrorUnauthorized("voice_authentication_required"));
             }
 
             let client = client.unwrap();
@@ -187,7 +182,7 @@ impl FromRequest for VoiceClientEx {
                     client.identity,
                     req.path()
                 );
-                return Err(ErrorUnauthorized("authentication_required"));
+                return Err(ErrorUnauthorized("voice_authentication_required"));
             }
 
             if !trying_to_connect_to_ws && client.socket.read().unwrap().is_none() {
@@ -196,7 +191,7 @@ impl FromRequest for VoiceClientEx {
                     client.identity,
                     req.path()
                 );
-                return Err(ErrorBadRequest("event_socket_not_connected"));
+                return Err(ErrorBadRequest("voice_event_socket_not_connected"));
             }
 
             return Ok(VoiceClientEx(client));

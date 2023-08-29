@@ -11,13 +11,16 @@ use mediasoup::{
     transport::Transport,
 };
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::voice::client::VoiceClientEx;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ProduceRequest {
+    #[schema(value_type = String, example = "audio")]
     pub kind: MediaKind,
+    #[schema(value_type = Object)]
     pub rtp_parameters: RtpParameters,
 }
 
@@ -41,7 +44,7 @@ impl ResponseError for ProduceError {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ProduceReply {
     pub id: String,
@@ -49,6 +52,24 @@ pub struct ProduceReply {
 
 pub type ProduceResponse = Result<Json<ProduceReply>, ProduceError>;
 
+/// Produce
+/// 
+/// Satisfies a clientside `send` transport's `produce` event by creating a
+/// server-side producer. This allows you to advertise that you are exporting an
+/// audio or video stream for everyone else to tune in to.
+/// 
+/// Connected peers are notified of the creation of this producer, and it can be
+/// discovered through the peers list endpoint, ready to be `consume()`d.
+/// 
+/// This endpoint requires a created and connected `send` transport.
+#[utoipa::path(
+    tag = "voice",
+    security(("voice" = [])),
+    responses(
+        (status = OK, description = "Server-side producer created ", body = ProduceReply),
+        (status = BAD_REQUEST, description = "Transport not created & connected yet, or unable to produce with supplied RTP parameters"),
+    )
+)]
 #[post("/voice/produce")]
 pub async fn handle_produce(client: VoiceClientEx, request: Json<ProduceRequest>) -> ProduceResponse {
     if client.c2s_transport.read().unwrap().is_none() {

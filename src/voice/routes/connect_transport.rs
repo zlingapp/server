@@ -7,14 +7,18 @@ use derive_more::{Display, Error};
 use log::{error, info, warn};
 use mediasoup::{prelude::DtlsParameters, webrtc_transport::WebRtcTransportRemoteParameters};
 use serde::Deserialize;
+use utoipa::ToSchema;
 
-use crate::voice::{client::VoiceClientEx, transport::TransportType, routes::create_transport::TransportTypeQuery};
+use crate::voice::{
+    client::VoiceClientEx, routes::create_transport::TransportTypeQuery, transport::TransportType,
+};
 
-/// This is the request body for the connect transport handler.
-/// It contains the DTLS parameters of the remote peer, which are needed to connect the transport.
-#[derive(Debug, Deserialize)]
+/// This contains the DTLS parameters of the remote peer, which are needed to connect the transport.
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectTransportRequest {
+    /// See: [DtlsParameters](https://mediasoup.org/documentation/v3/mediasoup/api/#WebRtcTransportDtlsParameters)
+    #[schema(value_type = Object)]
     dtls_parameters: DtlsParameters,
 }
 
@@ -38,13 +42,22 @@ impl ResponseError for ConnectTransportError {
 
 pub type ConnectTransportResponse = Result<&'static str, ConnectTransportError>;
 
-/// POST /transport/connect
+/// Connect WebRTC transport
 ///
-///    Connects a transport to the remote peer. The type of transport is specified in the query string.
-///
-/// eg. /transport/connect?type=send
-/// eg. /transport/connect?type=recv
-///
+/// Connects a WebRTC transport to the remote peer. The direction of the
+/// transport is specified in the `type` parameter. Please call this after
+/// creating a transport on both the client and server side and you are ready to
+/// send/receive data.
+#[utoipa::path(
+    tag = "voice",
+    security(("voice" = [])),
+    params(TransportTypeQuery),
+    responses(
+        (status = OK, description = "Transport connected", example = "connected"),
+        (status = BAD_REQUEST, description = "A transport of this type has not been created for this voice connection yet, so it cannot be connected."),
+        (status = INTERNAL_SERVER_ERROR, description = "There was an error while establishing the RTP connection for this transport.")
+    )
+)]
 #[post("/voice/transport/connect")]
 pub async fn connect_transport(
     client: VoiceClientEx,
