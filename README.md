@@ -18,6 +18,7 @@ This is the monolithic API server which hosts Zling's functions. It's written in
 - Real-time pub/sub event system
 - Stateless authentication
 - Really, really fast, thanks to Rust and Actix-web
+- Fully documented with OpenAPI
 
 ## Reference
 
