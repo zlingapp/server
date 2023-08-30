@@ -1,7 +1,7 @@
 # 🦀 Zling API Server
 This is the monolithic API server which hosts Zling's functions. It's written in Rust with the help of `actix-web`, `mediasoup-rust` and `sqlx`.
 
-> Zling is currently in development. Expect the API to change. API Docs are virtually non existent at the moment.
+> Zling is currently in development. Expect the API to change. API Docs are hosted by the server at /docs.
 
 ### Architecture
 - Database: PostgreSQL (`sqlx`)
