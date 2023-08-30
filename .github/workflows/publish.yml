@@ -59,7 +59,7 @@ jobs:
       - name: Download openapi.json
         run: curl -o openapi.json http://localhost:8080/openapi.json
       - name: Upload openapi.json
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: openapi.json
           path: openapi.json
