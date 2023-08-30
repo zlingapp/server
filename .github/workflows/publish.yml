@@ -26,6 +26,8 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up BuildKit context
+        run: docker buildx create --use --driver-opt network=host --buildkitd-flags '--allow-insecure-entitlement network.host'
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
@@ -42,6 +44,8 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
       - name: Set up database
         run: ./dev/setup_db.sh
       - name: Run server
