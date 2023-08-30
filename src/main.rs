@@ -8,10 +8,13 @@ use db::Database;
 use log::{error, info};
 use mediasoup::worker_manager::WorkerManager;
 use sqlx::postgres::PgPoolOptions;
+use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
 use voice::{VoiceChannels, VoiceClients};
 
 use crate::{db::DB, realtime::pubsub::consumer_manager::EventConsumerManager};
 
+mod apidocs;
 mod auth;
 mod channels;
 mod crypto;
@@ -26,7 +29,12 @@ mod settings;
 mod util;
 mod voice;
 
+// shortcut to make a Mutexed String to T hashmap
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
+
+#[derive(OpenApi)]
+#[openapi()]
+struct ApiDoc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -71,7 +79,8 @@ async fn main() -> std::io::Result<()> {
     let event_manager = Data::new(EventConsumerManager::new());
 
     HttpServer::new(move || {
-        // add logging middleware
+        let oapi = apidocs::setup_oapi();
+
         App::new()
             // logging
             .wrap(actix_web::middleware::Logger::new("%{r}a %r -> %s in %Dms").log_target("http"))
@@ -97,6 +106,12 @@ async fn main() -> std::io::Result<()> {
             .configure(media::routes::configure_app)
             .configure(settings::routes::configure_app)
             .default_service(web::route().to(api_endpoint_not_found))
+            // OpenAPI docs
+            .service(
+                RapiDoc::with_openapi("/openapi.json", oapi)
+                    .custom_html(include_str!("../res/rapidoc.html"))
+                    .path("/docs"),
+            )
     })
     .workers(2)
     .bind("127.0.0.1:8080")?
@@ -105,5 +120,20 @@ async fn main() -> std::io::Result<()> {
 }
 
 async fn api_endpoint_not_found() -> actix_web::HttpResponse {
-    actix_web::HttpResponse::NotFound().body("api_endpoint_not_found")
+    actix_web::HttpResponse::NotFound()
+        .content_type("text/html")
+        .body(
+            r#"
+            <h2>404 Not Found</h2>
+            <h5>Zling API</h5>
+            <p>The requested API endpoint was not found.</p>
+            <a href="/docs">View API Documentation</a>
+            <style>
+                body {
+                    font-family: sans-serif;
+                    text-align: center;
+                }
+            </style>
+        "#,
+        )
 }

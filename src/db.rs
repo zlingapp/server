@@ -4,9 +4,9 @@ use futures::TryFutureExt;
 use sqlx::query;
 use sqlx::{Pool, Postgres};
 
-use crate::auth::user::User;
+use crate::auth::user::{User, PublicUserInfo};
 use crate::crypto;
-use crate::messaging::message::{Message, MessageAuthor};
+use crate::messaging::message::Message;
 
 pub type DB = Data<Database>;
 
@@ -181,7 +181,7 @@ impl Database {
                 content: record.content.clone(),
                 attachments,
                 created_at: DateTime::<Utc>::from_utc(record.created_at, Utc),
-                author: MessageAuthor {
+                author: PublicUserInfo {
                     id: record.author_id.clone(),
                     username: record.author_username.clone(),
                     avatar: record.author_avatar.clone(),

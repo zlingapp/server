@@ -10,16 +10,31 @@ use log::warn;
 use nanoid::nanoid;
 use rand::Rng;
 use serde::Deserialize;
+use utoipa::ToSchema;
 
 use crate::{auth::user::User, db::DB};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct RegisterRequest {
+    /// The email address of the user
     email: String,
+    /// The password of the user
     password: String,
+    /// The desired username of the user
     username: String,
 }
 
+/// Register
+/// 
+/// Register a new user account using an email address and password.
+/// Does not log the user in automatically, please use the login endpoint for that
+#[utoipa::path(
+    responses(
+        (status = CONFLICT, description = "User with that email already exists", example = "already_exists"),
+        (status = OK, description = "Registration successful", example = "success")
+    ),
+    tag = "identity"
+)]
 #[post("/auth/register")]
 pub async fn register(db: DB, req: Json<RegisterRequest>) -> Result<HttpResponse, Error> {
     let user = Arc::new(User {

@@ -1,25 +1,47 @@
 use actix_web::{
-    error::{ErrorBadRequest, ErrorConflict, ErrorInternalServerError},
+    error::{ErrorBadRequest, ErrorInternalServerError},
     post,
     web::Json,
 };
 use log::warn;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::{auth::access_token::AccessToken, db::DB, security, channels::channel::ChannelType};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateGuildRequest {
+    #[schema(example = "My Cool Server")]
     name: String,
+    #[schema(example = "/api/media/s6NIiu2oOh1FEL0Xfjc7n/cat.jpg")]
     icon: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct CreateGuildResponse {
+    #[schema(example = "rMBrzZ7FQk6ZImWlTiRPo")]
     guild_id: String,
 }
-
+/// Create Guild
+/// 
+/// Creates a new guild with the given name and icon. The user will be the owner
+/// of the guild.
+/// 
+/// Default channels will be created for the guild:
+/// - A text channel named "general"
+/// - A voice channel named "Voice Chat"
+/// 
+/// The user will be automatically added to the guild as the owner.
+#[utoipa::path(
+    responses(
+        (status = BAD_REQUEST, description = "Invalid icon", example = "invalid_icon"),
+        (status = BAD_REQUEST, description = "Invalid guild name", example = "invalid_icon"),
+        (status = OK, description = "Guild created successfully", body = CreateGuildResponse)
+    ),
+    tag = "guilds",
+    security(("token" = []))
+)]
 #[post("/guilds")]
 pub async fn create_guild(
     db: DB,
@@ -33,6 +55,8 @@ pub async fn create_guild(
             return Err(ErrorBadRequest("invalid_icon"));
         }
     }
+
+    // todo: validate guild name
 
     let mut tx = db
         .pool
@@ -62,7 +86,7 @@ pub async fn create_guild(
     })?;
 
     if rows_affected == 0 {
-        return Err(ErrorConflict("guild_create_id_conflict"));
+        return Err(ErrorInternalServerError("failed"));
     }
 
     query_affected(

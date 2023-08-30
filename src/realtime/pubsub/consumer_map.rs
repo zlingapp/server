@@ -1,12 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::auth::user::UserId;
-
 use super::{consumer::EventConsumer, topic::Topic};
 
 pub struct ConsumerMap {
     pub topic_to_cons: HashMap<Topic, HashSet<EventConsumer>>,
-    pub id_to_cons_and_topics: HashMap<UserId, (EventConsumer, Vec<Topic>)>,
+    // user id to event consumer and subscribed topics
+    pub id_to_cons_and_topics: HashMap<String, (EventConsumer, Vec<Topic>)>,
 }
 
 impl ConsumerMap {

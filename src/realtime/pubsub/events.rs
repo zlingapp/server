@@ -42,6 +42,58 @@ pub struct TokenInQuery {
     auth: String,
 }
 
+/// Event socket
+/// 
+/// Used to subscribe to certain generators of events (called "topics") and
+/// receive information within these topics.
+/// 
+/// For example, this is used to receive messages from others in real time.
+/// 
+/// ## Subscribing
+/// Subscribe to the topic of type `channel` with id `j_NNyhSbOl1AwqCTMAZ2G`.
+/// ```js
+/// {
+///     "sub": [ "channel:j_NNyhSbOl1AwqCTMAZ2G" ]
+/// }
+/// ```
+/// 
+/// Zling will now notify you about messages sent in channel
+/// `j_NNyhSbOl1AwqCTMAZ2G` and updates to the channel itself.
+/// 
+/// Here is what an event of type `message` might look like.
+/// ```js
+/// {
+///     "topic": {
+///         "id": "j_NNyhSbOl1AwqCTMAZ2G",
+///         "type": "channel"
+///     }
+///     "event": {
+///         "type": "message"
+///         "id": "uIqNlwPDYrz9iou_ycKvd",
+///         "createdAt": "2023-08-29T17:29:22.343533Z",
+///         "content": "test",
+///         "author": {
+///             "avatar": "/api/media/QoJXQnwJY1CfQj2L0H9gH/avatar.png",
+///             "id": "kEBbg9_IZXajYRevn7cUS",
+///             "username": "someone#1234"
+///         },
+///     },
+/// }
+/// ```
+/// 
+/// ### Unsubscribing
+/// Unsubscribing to topics is quite similar. It can be done like so:
+/// ```js
+/// {
+///     "unsub": [ "channel:j_NNyhSbOl1AwqCTMAZ2G" ]
+/// }
+/// ```
+#[utoipa::path(
+    tag = "pubsub",
+    params(
+        ("auth" = AccessToken, Query, description = "Access token")
+    ),
+)]
 #[get("/events/ws")]
 pub async fn events_ws(
     ecm: Data<EventConsumerManager>,

@@ -1,26 +1,45 @@
 use actix_web::{get, web::Json};
-use derive_more::{Display, Error};
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::{voice::client::VoiceClientEx, auth::user::PublicUserInfo};
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ChannelMemberInfo {
     identity: String,
+    #[schema(value_type = Vec<uuid::Uuid>)]
     producers: Vec<String>,
     user: PublicUserInfo,
 }
 
-#[derive(Debug, Display, Error)]
-#[display(rename_all = "snake_case")]
-pub enum QueryChannelError {}
-impl actix_web::error::ResponseError for QueryChannelError {}
+// #[derive(Debug, Display, Error)]
+// #[display(rename_all = "snake_case")]
+// pub enum QueryChannelError {}
+// impl actix_web::error::ResponseError for QueryChannelError {}
 
+/// List peers in channel
+/// 
+/// Gives you a list of everyone currently connected to the voice channel you're
+/// in, and a list of their producers that you can consume.
+/// 
+/// This also gives you the underlying `User` information for a particular RTC
+/// identity, which is useful for showing in the UI.
+/// 
+/// Please avoid repeated calling of this endpoint to update the peer list, as
+/// the websocket should already notify you when peers leave and join with
+/// equrivalent details about the peer.
+#[utoipa::path(
+    tag = "voice",
+    security(("voice" = [])),
+    responses(
+        (status = OK, description = "List of peers"),
+    )
+)]
 #[get("/voice/peers")]
 pub async fn list_vc_peers(
     client: VoiceClientEx,
-) -> Result<Json<Vec<ChannelMemberInfo>>, QueryChannelError> {
+) -> Json<Vec<ChannelMemberInfo>> {
     let reply;
     {
         let clients = client.channel.clients.lock().unwrap();
@@ -36,5 +55,5 @@ pub async fn list_vc_peers(
             .collect();
     }
 
-    Ok(Json(reply))
+    Json(reply)
 }

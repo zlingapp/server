@@ -1,5 +1,5 @@
 use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError, ErrorForbidden},
+    error::{ErrorBadRequest, ErrorForbidden, ErrorInternalServerError},
     get,
     web::{Path, Query},
     Error, HttpResponse,
@@ -7,34 +7,56 @@ use actix_web::{
 use chrono::{DateTime, NaiveDateTime, Utc};
 use log::warn;
 use serde::Deserialize;
-use serde_json::Value;
+use utoipa::IntoParams;
 
 use crate::{
-    auth::access_token::AccessToken,
+    auth::{access_token::AccessToken, user::PublicUserInfo},
     db::DB,
-    messaging::message::{Message, MessageAuthor},
+    messaging::message::Message,
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
 pub struct MessageHistoryQuery {
+    #[param(style = Form, minimum = 1, maximum = 50)]
     limit: Option<i64>,
+    #[param(style = Form)]
     before: Option<DateTime<Utc>>,
+    #[param(style = Form)]
     after: Option<DateTime<Utc>>,
+}
+
+#[derive(Deserialize, IntoParams)]
+struct ReadHistoryPath {
+    guild_id: String,
+    channel_id: String,
 }
 
 const MAX_MESSAGE_LIMIT: i64 = 50;
 
+/// Read message history
+/// 
+/// Get the messages in the channel sent in between `after` and `before`, up to
+/// a limit of `limit`. The maximum value of `limit` can be 
+#[utoipa::path(
+    tag = "messaging",
+    security(("token" = [])),
+    params(MessageHistoryQuery, ReadHistoryPath),
+    responses(
+        (status = OK, description = "Message listing succeeded, no more messages to retreive", body = Vec<Message>),
+        (status = PARTIAL_CONTENT, description = "Message listing succeeded, but there are more messages beyond limit", body = Vec<Message>),
+        (status = FORBIDDEN, description = "No permission to read message history"),
+        (status = BAD_REQUEST, description = "Invalid message limit")
+    )
+)]
 #[get("/guilds/{guild_id}/channels/{channel_id}/messages")]
 async fn read_message_history(
     db: DB,
     token: AccessToken,
-    path: Path<(String, String)>,
+    path: Path<ReadHistoryPath>,
     req: Query<MessageHistoryQuery>,
 ) -> Result<HttpResponse, Error> {
-    let (guild_id, channel_id) = path.into_inner();
-
     let can_read = db
-        .can_user_read_message_history_from(&token.user_id, &guild_id, &channel_id)
+        .can_user_read_message_history_from(&token.user_id, &path.guild_id, &path.channel_id)
         .await
         .unwrap();
 
@@ -44,7 +66,7 @@ async fn read_message_history(
 
     let limit = req.limit.unwrap_or(MAX_MESSAGE_LIMIT);
 
-    if limit <= 0 {
+    if limit < 1 {
         return Err(ErrorBadRequest("invalid_limit"));
     }
 
@@ -78,7 +100,7 @@ async fn read_message_history(
         ORDER BY messages.created_at DESC 
         LIMIT $2
         "#,
-        channel_id,
+        path.channel_id,
         limit,
         req.before.unwrap_or(Utc::now()).naive_utc(),
         req.after
@@ -92,7 +114,7 @@ async fn read_message_history(
         ErrorInternalServerError("fetch_failed")
     })?;
 
-    let messages: Vec<Value> = messages
+    let messages: Vec<Message> = messages
         .iter()
         .rev()
         .map(|record| {
@@ -101,19 +123,17 @@ async fn read_message_history(
                 None => None,
             };
 
-            let message = Message {
+            Message {
                 id: record.id.clone(),
                 content: record.content.clone(),
                 attachments,
                 created_at: DateTime::<Utc>::from_utc(record.created_at, Utc),
-                author: MessageAuthor {
+                author: PublicUserInfo {
                     id: record.author_id.clone(),
                     username: record.author_username.clone(),
                     avatar: record.author_avatar.clone(),
                 },
-            };
-
-            serde_json::to_value(message).unwrap()
+            }
         })
         .collect();
 
