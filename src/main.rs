@@ -78,6 +78,7 @@ async fn main() -> std::io::Result<()> {
     // pubsub
     let event_manager = Data::new(EventConsumerManager::new());
 
+    info!("Starting HTTP server on {}:{}", options::BIND_ADDR.ip(), options::BIND_ADDR.port());
     HttpServer::new(move || {
         let oapi = apidocs::setup_oapi();
 
@@ -114,7 +115,7 @@ async fn main() -> std::io::Result<()> {
             )
     })
     .workers(2)
-    .bind("127.0.0.1:8080")?
+    .bind(options::bind_addr())?
     .run()
     .await
 }

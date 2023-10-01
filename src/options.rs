@@ -1,5 +1,5 @@
 use std::{
-    net::{IpAddr, Ipv4Addr},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     num::{NonZeroU32, NonZeroU8},
     str::FromStr,
 };
@@ -49,6 +49,8 @@ lazy_static! {
     static ref DB_PASSWORD: String = var("DB_PASSWORD", "dev");
     static ref DB_NAME: String = var("DB_NAME", "zling-backend");
     static ref DB_POOL_MAX_CONNS: u32 = var("DB_POOL_MAX_CONNS", "5");
+
+    pub static ref BIND_ADDR: SocketAddr = var("BIND_ADDR", "127.0.0.1:8080");
 
     pub static ref MEDIA_PATH: String = {
         let path: String = var("MEDIA_PATH", "/var/tmp/zling-media");
@@ -141,6 +143,10 @@ pub fn db_conn_string() -> String {
     )
 }
 
+pub fn bind_addr() -> (IpAddr, u16) {
+    (BIND_ADDR.ip(), BIND_ADDR.port())
+}
+
 pub fn initialize_all() {
     lazy_static::initialize(&RTC_PORT_MIN);
     lazy_static::initialize(&RTC_PORT_MAX);
@@ -163,7 +169,8 @@ pub fn initialize_all() {
     if !*ENABLE_UDP && *PREFER_UDP {
         panic!("PREFER_UDP cannot be true if ENABLE_UDP is false");
     }
-
+    
+    lazy_static::initialize(&BIND_ADDR);
     lazy_static::initialize(&DB_HOST);
     lazy_static::initialize(&DB_PORT);
     lazy_static::initialize(&DB_USER);
