@@ -5,7 +5,7 @@ use std::{
 };
 
 use lazy_static::lazy_static;
-use log::{info, warn};
+use log::{info, warn, error};
 use mediasoup::{
     prelude::ListenIp,
     router::RouterOptions,
@@ -24,10 +24,14 @@ where
     T: FromStr,
     <T as FromStr>::Err: std::fmt::Debug,
 {
-    std::env::var(name)
-        .unwrap_or(default.to_owned())
-        .parse()
-        .unwrap()
+    let given = std::env::var(name).unwrap_or(default.to_owned());
+    match given.parse() {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            error!("Invalid config option `{}={}`: {:?} ({}'s default is usually {})", name, given, e, name, default);
+            std::process::exit(1);
+        }
+    }
 }
 
 lazy_static! {
@@ -169,7 +173,7 @@ pub fn initialize_all() {
     if !*ENABLE_UDP && *PREFER_UDP {
         panic!("PREFER_UDP cannot be true if ENABLE_UDP is false");
     }
-    
+
     lazy_static::initialize(&BIND_ADDR);
     lazy_static::initialize(&DB_HOST);
     lazy_static::initialize(&DB_PORT);
@@ -205,8 +209,5 @@ pub fn print_all() {
         *DB_NAME, *DB_HOST, *DB_PORT, *DB_POOL_MAX_CONNS
     );
 
-    info!(
-        "config: Uploaded media stored in: {}",
-        *MEDIA_PATH
-    );
+    info!("config: Uploaded media stored in: {}", *MEDIA_PATH);
 }
