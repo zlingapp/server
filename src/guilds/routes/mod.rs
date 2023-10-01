@@ -7,6 +7,7 @@ pub mod delete_guild;
 pub mod join_guild;
 pub mod list_joined_guilds;
 pub mod update_guild;
+pub mod list_members;
 
 #[derive(Deserialize, IntoParams)]
 pub struct GuildIdParams {
@@ -20,7 +21,8 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
         .service(delete_guild::delete_guild)
         .service(join_guild::join_guild)
         .service(list_joined_guilds::list_joined_guilds)
-        .service(update_guild::update_guild);
+        .service(update_guild::update_guild)
+        .service(list_members::list_members);
 }
 
 #[derive(OpenApi)]
@@ -33,7 +35,8 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
         join_guild::join_guild,
         create_guild::create_guild,
         // update_guild::update_guild,
-        delete_guild::delete_guild
+        delete_guild::delete_guild,
+        list_members::list_members
     ),
     components(schemas(
         create_guild::CreateGuildRequest,
