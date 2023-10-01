@@ -56,7 +56,7 @@ impl Socket {
         false
     }
 
-    fn internal_on_message(&self, msg: String) {
+    fn dispatch_on_message(&self, msg: String) {
         if msg == "heartbeat" {
             *self.last_ping.write().unwrap() = Some(std::time::Instant::now());
             return;
@@ -67,7 +67,7 @@ impl Socket {
         }
     }
 
-    fn internal_on_disconnect(&self, reason: DisconnectReason) {
+    fn dispatch_on_disconnect(&self, reason: DisconnectReason) {
         if let Some(on_disconnect) = &self.on_disconnect {
             on_disconnect(reason);
         }
@@ -75,11 +75,15 @@ impl Socket {
 
     fn spawn_read_loop(weak: Weak<Socket>, mut session: Session, mut msg_stream: MessageStream) {
         actix_rt::spawn(async move {
+            // loop through messages from the client
             while let Some(Ok(msg)) = msg_stream.next().await {
+                // check if socket has been dropped & convert to strong reference
                 let socket = match weak.upgrade() {
                     Some(strong) => strong,
                     None => return,
                 };
+                
+                // process message
                 match msg {
                     Message::Ping(bytes) => {
                         if session.pong(&bytes).await.is_err() {
@@ -87,13 +91,14 @@ impl Socket {
                         }
                     }
                     Message::Text(s) => {
-                        Socket::internal_on_message(&socket, s.to_string());
+                        Socket::dispatch_on_message(&socket, s.to_string());
                     }
                     Message::Close(_) => break,
                     _ => {}
                 };
             }
 
+            // if message stream ends, check if socket is still allocated
             let socket = match weak.upgrade() {
                 Some(strong) => strong,
                 None => return,
@@ -104,7 +109,8 @@ impl Socket {
                 session.close(None).await.unwrap_or(());
             }
 
-            socket.internal_on_disconnect(DisconnectReason::ReadExaust);
+            // call on_disconnect callback
+            socket.dispatch_on_disconnect(DisconnectReason::ReadExaust);
         });
     }
 
@@ -126,7 +132,7 @@ impl Socket {
                         session.close(None).await.unwrap_or(());
                     }
 
-                    socket.internal_on_disconnect(DisconnectReason::PingTimeout);
+                    socket.dispatch_on_disconnect(DisconnectReason::PingTimeout);
                     return;
                 }
             }

@@ -37,9 +37,25 @@ use crate::{
     },
 };
 
+use super::topic::Topic;
+
 #[derive(Deserialize)]
 pub struct TokenInQuery {
     auth: String,
+}
+
+/// Sent by the client on the event socket.
+#[derive(Deserialize)]
+#[serde(tag = "type")]
+pub enum EventSocketRequest {
+    #[serde(rename = "sub")]
+    Subscribe {
+        topics: Vec<Topic>
+    },
+    #[serde(rename = "unsub")]
+    Unsubscribe {
+        topics: Vec<Topic>
+    },
 }
 
 /// Event socket
@@ -53,7 +69,8 @@ pub struct TokenInQuery {
 /// Subscribe to the topic of type `channel` with id `j_NNyhSbOl1AwqCTMAZ2G`.
 /// ```js
 /// {
-///     "sub": [ "channel:j_NNyhSbOl1AwqCTMAZ2G" ]
+///     "type": "sub",
+///     "topics": [{ "id": "j_NNyhSbOl1AwqCTMAZ2G", "type": "channel" } }]
 /// }
 /// ```
 /// 
@@ -85,7 +102,8 @@ pub struct TokenInQuery {
 /// Unsubscribing to topics is quite similar. It can be done like so:
 /// ```js
 /// {
-///     "unsub": [ "channel:j_NNyhSbOl1AwqCTMAZ2G" ]
+///     "type": "unsub",
+///     "topics": [{ "id": "j_NNyhSbOl1AwqCTMAZ2G", "type": "channel" } }]
 /// }
 /// ```
 #[utoipa::path(
@@ -101,6 +119,7 @@ pub async fn events_ws(
     query: Query<TokenInQuery>,
     body: Payload,
 ) -> Result<HttpResponse, Error> {
+    // get token from query
     let token = match query.auth.parse::<Token>() {
         Ok(token) => AccessToken::from_existing(token),
         Err(_) => {
@@ -109,11 +128,13 @@ pub async fn events_ws(
     }
     .ok_or(ErrorUnauthorized("authentication_required"))?;
 
+    // set up handlers
     let on_message_handler: Box<dyn Fn(String) + Send + Sync + 'static>;
     let on_close_handler;
 
     let token = Arc::new(token);
 
+    // generate random socket id
     let socket_id = nanoid::nanoid!();
 
     {
@@ -121,46 +142,20 @@ pub async fn events_ws(
         let socket_id = socket_id.clone();
 
         on_message_handler = Box::new(move |msg: String| {
-            // message can contain keys `sub`, `unsub`, and `message`
-            // `sub` and `unsub` are arrays of topics to subscribe/unsubscribe to
-            // `message` is a message to send
-
-            let msg = match serde_json::from_str::<serde_json::Value>(&msg) {
-                Ok(msg) => msg,
-                Err(err) => {
-                    log::error!("failed to parse message: {}", err);
-                    return;
-                }
-            };
-
-            let msg = match msg.as_object() {
-                Some(msg) => msg,
-                None => {
-                    log::error!("message is not an object: {}", msg);
-                    return;
-                }
-            };
-
-            if let Some(Some(array)) = msg.get("sub").map(|v| v.as_array()) {
-                for v in array {
-                    if let Some(Ok(topic)) = v.as_str().map(|s| s.parse()) {
-                        // todo: do permission check here
-
-                        // susbcribe to topic
-                        ecm.subscribe(&socket_id, topic).unwrap_or(());
+            if let Ok(esr) = serde_json::from_str::<EventSocketRequest>(&msg) {
+                use EventSocketRequest::*;
+                match esr {
+                    Subscribe { topics } => {
+                        for topic in topics {
+                            ecm.subscribe(&socket_id, topic).unwrap_or(());
+                        }
+                    }
+                    Unsubscribe { topics } => {
+                        for topic in topics {
+                            ecm.unsubscribe(&socket_id, &topic).unwrap_or(());
+                        }
                     }
                 }
-            }
-
-            if let Some(Some(array)) = msg.get("unsub").map(|v| v.as_array()) {
-                array.iter().for_each(|v| {
-                    if let Some(Ok(topic)) = v.as_str().map(|s| s.parse()) {
-                        // todo: do permission check here
-
-                        // unsubscribe from topic
-                        ecm.unsubscribe(&socket_id, &topic).unwrap_or(());
-                    }
-                })
             }
         });
     }
@@ -183,7 +178,8 @@ pub async fn events_ws(
         Some(on_close_handler),
     )?;
 
-    ecm.add_consumer(EventConsumer::new(token.user_id.clone(), socket));
+    let ec = EventConsumer::new(token.user_id.clone(), socket);
+    ecm.add_consumer(ec);
 
     Ok(response)
 }
