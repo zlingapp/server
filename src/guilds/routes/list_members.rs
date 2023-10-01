@@ -46,11 +46,9 @@ pub async fn list_members(
             users.avatar 
         FROM users, members 
         WHERE 
-            members.user_id = $2
-            AND members.guild_id = $1 
-            AND users.id = $2;"#,
-        &path.guild_id,
-        token.user_id
+            members.guild_id = $1 
+            AND members.user_id = users.id;"#,
+        &path.guild_id
     )
     .fetch_all(&db.pool)
     .await
