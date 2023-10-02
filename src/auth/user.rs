@@ -6,7 +6,7 @@ use actix_web::error::ErrorInternalServerError;
 use actix_web::FromRequest;
 
 use futures::Future;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
 
 use crate::{auth::access_token::AccessToken, db::DB};
@@ -26,12 +26,14 @@ pub struct User {
     #[schema(example = "/api/media/9ybevZcdBh-3Z2KRLBidT/avatar.png")]
     pub avatar: String,
     #[schema(example = "someone@example.com")]
-    pub email: String,
+    pub email: Option<String>,
+    #[schema(example = "false")]
+    pub bot: bool,
 }
 
 // helper struct for representing user info to other users
 // the fields here should not be sensitive info, eg. email
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct PublicUserInfo {
     #[schema(example = "xoKM4W7NDqHjK_V0g9s3y")]
     pub id: String,

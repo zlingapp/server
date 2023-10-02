@@ -28,6 +28,7 @@ mod security;
 mod settings;
 mod util;
 mod voice;
+mod bot;
 
 // shortcut to make a Mutexed String to T hashmap
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
@@ -106,6 +107,8 @@ async fn main() -> std::io::Result<()> {
             // file uploads
             .configure(media::routes::configure_app)
             .configure(settings::routes::configure_app)
+            // bots
+            .configure(bot::routes::configure_app)
             .default_service(web::route().to(api_endpoint_not_found))
             // OpenAPI docs
             .service(

@@ -7,7 +7,11 @@ use actix_web::{
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{auth::{token::Token, access_token::AccessToken}, db::DB, util::use_display};
+use crate::{
+    auth::{access_token::AccessToken, token::Token},
+    db::DB,
+    util::use_display,
+};
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -25,7 +29,7 @@ pub struct ReissueResponse {
 }
 
 /// Reissue Tokens
-/// 
+///
 /// Reissue an access & refresh token pair using a valid refresh token. This
 /// endpoint is used to get a new access token when the old one expires. Please
 /// note that the old refresh token is invalidated.
@@ -50,6 +54,16 @@ pub async fn reissue(
         }
     })?;
 
+    if refresh_token.is_bot() {
+        // for bots, just issue a new access token without invalidating the old refresh token
+        let access_token = AccessToken::new(refresh_token.user_id.clone());
+
+        return Ok(Json(ReissueResponse {
+            access_token,
+            refresh_token,
+        }));
+    }
+
     let user_agent = match req.headers().get("User-Agent") {
         Some(user_agent) => match user_agent.to_str() {
             Ok(user_agent) => user_agent,
@@ -63,7 +77,7 @@ pub async fn reissue(
         Success {
             access_token,
             refresh_token,
-        } => Ok(Json(ReissueResponse{
+        } => Ok(Json(ReissueResponse {
             access_token,
             refresh_token,
         })),

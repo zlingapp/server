@@ -33,8 +33,12 @@ pub enum IssueAccessTokenResult {
 }
 
 impl Database {
-    async fn create_new_tokens_for(&self, user_id: &str, user_agent: &str) -> (AccessToken, Token) {
-        let expires = Utc::now() + *REFRESH_TOKEN_VALIDITY;
+    pub async fn create_refresh_token(&self, user_id: &str, user_agent: &str, infinite: bool) -> Token {
+        let expires = if infinite {
+            Utc::now() + Duration::days(365 * 100) // heh... *cough cough* look! I hit the zling token limit! beeeeeeeeeeeeeeeeeeeeeeeep
+        } else {
+            Utc::now() + *REFRESH_TOKEN_VALIDITY
+        };
 
         // add refresh token to db
         let nonce = query!(
@@ -56,8 +60,11 @@ impl Database {
         .unwrap()
         .nonce;
 
-        let refresh_token = Token::new(user_id.to_string(), expires, nonce);
+        Token::new(user_id.to_string(), expires, nonce)
+    }
 
+    async fn create_token_pair(&self, user_id: &str, user_agent: &str) -> (AccessToken, Token) {
+        let refresh_token = self.create_refresh_token(user_id, user_agent, false).await;
         let access_token = AccessToken::new(user_id.to_string());
 
         return (access_token, refresh_token);
@@ -70,7 +77,7 @@ impl Database {
         user_agent: &str,
     ) -> IssueRefreshTokenResult {
         let user = query!(
-            "SELECT id, name, email, avatar, password FROM users WHERE email = $1",
+            "SELECT id, name, email, avatar, password FROM users WHERE email = $1 AND NOT bot",
             email
         )
         .fetch_one(&self.pool)
@@ -78,7 +85,9 @@ impl Database {
 
         match user {
             Ok(record) => {
-                if !crypto::verify(password, &record.password) {
+                let password_in_db = record.password.unwrap(); // this is fine since we checked that the user is not a bot
+
+                if !crypto::verify(password, &password_in_db) {
                     return IssueRefreshTokenResult::Failure;
                 }
 
@@ -87,10 +96,11 @@ impl Database {
                     name: record.name,
                     email: record.email,
                     avatar: record.avatar,
+                    bot: false,
                 };
 
                 let (access_token, refresh_token) =
-                    self.create_new_tokens_for(&user.id, user_agent).await;
+                    self.create_token_pair(&user.id, user_agent).await;
 
                 return IssueRefreshTokenResult::Success {
                     user,
@@ -124,7 +134,7 @@ impl Database {
         }
 
         let (access_token, refresh_token) = self
-            .create_new_tokens_for(&refresh_token.user_id, user_agent)
+            .create_token_pair(&refresh_token.user_id, user_agent)
             .await;
 
         return IssueAccessTokenResult::Success {
