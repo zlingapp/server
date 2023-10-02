@@ -33,9 +33,9 @@ pub enum IssueAccessTokenResult {
 }
 
 impl Database {
-    pub async fn create_refresh_token(&self, user_id: &str, user_agent: &str, infinite: bool) -> Token {
-        let expires = if infinite {
-            Utc::now() + Duration::days(365 * 100) // heh... *cough cough* look! I hit the zling token limit! beeeeeeeeeeeeeeeeeeeeeeeep
+    pub async fn create_refresh_token(&self, user_id: &str, user_agent: &str, long_lived: bool) -> Token {
+        let expires = if long_lived {
+            Utc::now() + Duration::days(365 * 10) // 10 year validity
         } else {
             Utc::now() + *REFRESH_TOKEN_VALIDITY
         };
