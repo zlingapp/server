@@ -26,7 +26,8 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
     ),
     components(schemas(
         create_bot::CreateBotRequest,
-        create_bot::BotDetails
+        create_bot::BotDetails,
+        token_reset::TokenResetResponse,
     ))
 )]
 pub struct BotsApiDoc;
