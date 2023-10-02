@@ -1,7 +1,16 @@
-use utoipa::{OpenApi, openapi::security::{SecurityScheme, HttpBuilder, HttpAuthScheme, ApiKey, ApiKeyValue}};
+use utoipa::{
+    openapi::{
+        security::{ApiKey, ApiKeyValue, HttpAuthScheme, HttpBuilder, SecurityScheme},
+        ServerBuilder,
+    },
+    OpenApi,
+};
 
 use crate::{
-    auth::routes::AuthApiDocs, channels::routes::ChannelsApiDocs, guilds::routes::GuildsApiDocs, media::routes::MediaApiDocs, messaging::routes::MessagingApiDocs, voice::routes::VoiceApiDoc, realtime::pubsub::PubSubApiDoc, bot::routes::BotsApiDoc,
+    auth::routes::AuthApiDocs, bot::routes::BotsApiDoc, channels::routes::ChannelsApiDocs,
+    guilds::routes::GuildsApiDocs, media::routes::MediaApiDocs,
+    messaging::routes::MessagingApiDocs, realtime::pubsub::PubSubApiDoc,
+    voice::routes::VoiceApiDoc,
 };
 
 #[derive(OpenApi)]
@@ -12,6 +21,10 @@ pub struct ApiDocs;
 
 pub fn setup_oapi() -> utoipa::openapi::OpenApi {
     let mut oapi = ApiDocs::openapi();
+    oapi.servers = Some(vec![
+        ServerBuilder::new().url("/api").build(),
+        ServerBuilder::new().url("/").build(),
+    ]);
 
     oapi.merge(AuthApiDocs::openapi());
     oapi.merge(ChannelsApiDocs::openapi());
@@ -53,7 +66,7 @@ impl utoipa::Modify for VoiceSecurityAddon {
             utoipa::openapi::ComponentsBuilder::new()
                 .security_scheme(
                     "voice",
-                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("RTC-Token")))
+                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("RTC-Token"))),
                 )
                 .build(),
         )
