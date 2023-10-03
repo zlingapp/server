@@ -3,13 +3,13 @@
 use actix_web::{
     error::{ErrorBadRequest, ErrorInternalServerError},
     get,
-    web::Redirect,
+    web::{Redirect,Data},
     Responder,
 };
 use log::warn;
 
 use crate::guilds::routes::GuildIdParams;
-use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath};
+use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath,realtime::pubsub::consumer_manager::EventConsumerManager};
 
 // todo: phase this out for invite system. btw, this is GET so people can go in
 // their browser to join a guild
@@ -37,6 +37,7 @@ pub async fn join_guild(
     db: DB,
     token: AccessToken,
     req: GuildPath,
+    ecm: Data<EventConsumerManager>
 ) -> Result<impl Responder, actix_web::Error> {
     let rows_affected = sqlx::query!(
         r#"
@@ -63,7 +64,7 @@ pub async fn join_guild(
     if rows_affected == 0 {
         return Err(ErrorBadRequest("join_invalid"));
     }
-
+    ecm.notify_guild_member_list_update(&req.guild_id).await;
     // again, this is temporarily here so the browser redirects back to /
     Ok(Redirect::to("/").see_other())
 }

@@ -23,6 +23,8 @@ pub struct EventConsumerManager {
 pub enum Event<'l> {
     /// Something changed in the list of channels in a guild.
     ChannelListUpdate,
+    /// Something changed in the list of members in a guild.
+    MemberListUpdate,
     /// A new message was sent.
     Message(&'l Message),
     /// A message was deleted.
@@ -93,6 +95,14 @@ impl EventConsumerManager {
         self.broadcast(
             &Topic::new(TopicType::Guild, guild_id.to_string()),
             Event::ChannelListUpdate,
+        )
+        .await;
+    }
+
+    pub async fn notify_guild_member_list_update(&self, guild_id: &str) {
+        self.broadcast(
+            &Topic::new(TopicType::Guild, guild_id.to_string()),
+            Event::MemberListUpdate,
         )
         .await;
     }
