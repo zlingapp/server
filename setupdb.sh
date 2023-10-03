@@ -1,5 +1,5 @@
-#!/bin/env bash
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+#!/usr/bin/env sh
+SCRIPT_DIR=$( cd -- "$( dirname -- "$0" )" &> /dev/null && pwd )
 
 # check if docker container with name zling-db already exists
 if [ "$(docker ps -aq -f name=zling-db)" ]; then
@@ -28,7 +28,7 @@ docker run -d -e POSTGRES_USER=zling-backend -e POSTGRES_PASSWORD=dev -p 127.0.0
 echo "Waiting 3 seconds for the db to start..."
 sleep 3
 echo "Creating schema..."
-docker exec -i zling-db psql -U zling-backend -h 127.0.0.1 zling-backend < $SCRIPT_DIR/../sql/create-tables.sql || exit 1
+docker exec -i zling-db psql -U zling-backend -h 127.0.0.1 zling-backend < $SCRIPT_DIR/sql/create-tables.sql || exit 1
 echo
 echo "Database is now running!"
 echo
