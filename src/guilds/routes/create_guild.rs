@@ -21,7 +21,7 @@ pub struct CreateGuildRequest {
 #[derive(Serialize, ToSchema)]
 pub struct CreateGuildResponse {
     #[schema(example = "rMBrzZ7FQk6ZImWlTiRPo")]
-    guild_id: String,
+    id: String,
 }
 /// Create Guild
 /// 
@@ -144,7 +144,7 @@ pub async fn create_guild(
         .await
         .map_err(|_| ErrorInternalServerError("failed"))?;
 
-    Ok(Json(CreateGuildResponse { guild_id }))
+    Ok(Json(CreateGuildResponse { id: guild_id }))
 }
 
 /// runs a query on a transaction and returns the rows affected
