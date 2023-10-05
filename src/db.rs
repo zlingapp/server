@@ -23,7 +23,7 @@ impl Database {
         let user = sqlx::query_as!(
             User,
             r#"
-                SELECT id, name, email, avatar
+                SELECT id, name, email, avatar, bot
                 FROM users
                 WHERE id = $1
             "#,
@@ -38,16 +38,17 @@ impl Database {
     pub async fn register_user(&self, user: &User, password: &str) -> Result<bool, sqlx::Error> {
         let rows_affected = query!(
             r#"
-                INSERT INTO users (id, name, email, avatar, password) 
-                SELECT $1, $2, $3, $4, $5 
+                INSERT INTO users (id, name, email, avatar, password, bot) 
+                SELECT $1, $2, $3, $4, $5, $6
                 FROM (SELECT 1) AS t
-                WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = $3)
+                WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = $3 OR name = $2)
             "#,
             user.id,
             user.name,
             user.email,
             user.avatar,
-            crypto::hash(password)
+            crypto::hash(password),
+            user.bot
         )
         .execute(&self.pool)
         .await?

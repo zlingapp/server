@@ -2,12 +2,13 @@ BEGIN;
 CREATE TABLE users (
     id          text        NOT NULL PRIMARY KEY,
     name        text        NOT NULL,
-    email       text        NOT NULL,
-    password    text        NOT NULL,
+    email       text,
+    password    text,
     avatar      text        NOT NULL,
     friends     text[]      NOT NULL DEFAULT array[]::text[],
     created_at  timestamp   NOT NULL DEFAULT now(),
-    updated_at  timestamp   NOT NULL DEFAULT now()
+    updated_at  timestamp   NOT NULL DEFAULT now(),
+    bot         boolean     NOT NULL DEFAULT false
 );
 CREATE TABLE guilds (
     id          text        NOT NULL PRIMARY KEY,
@@ -63,5 +64,12 @@ CREATE TABLE tokens (
     expires_at  timestamp   NOT NULL,
     user_agent  text        NOT NULL DEFAULT 'Unknown',
     PRIMARY KEY (nonce, user_id)
+);
+CREATE TABLE bots (
+    id          text        NOT NULL,
+    owner_id    text        NOT NULL,
+    created_at  timestamp   NOT NULL DEFAULT now(),
+    updated_at  timestamp   NOT NULL DEFAULT now(),
+    PRIMARY KEY (owner_id, id)
 );
 COMMIT;

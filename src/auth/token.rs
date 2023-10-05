@@ -28,6 +28,10 @@ impl Token {
         // check if expiry is before now
         self.expires < Utc::now()
     }
+
+    pub fn is_bot(&self) -> bool {
+        self.user_id.starts_with("bot:")
+    }
 }
 
 impl Display for Token {

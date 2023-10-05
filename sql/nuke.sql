@@ -7,4 +7,5 @@ DROP TABLE messages;
 DROP TABLE roles;
 DROP TABLE members;
 DROP TABLE tokens;
+DROP TABLE bots;
 COMMIT;

@@ -1,11 +1,11 @@
 use std::{
-    net::{IpAddr, Ipv4Addr},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     num::{NonZeroU32, NonZeroU8},
     str::FromStr,
 };
 
 use lazy_static::lazy_static;
-use log::{info, warn};
+use log::{info, warn, error};
 use mediasoup::{
     prelude::ListenIp,
     router::RouterOptions,
@@ -24,10 +24,14 @@ where
     T: FromStr,
     <T as FromStr>::Err: std::fmt::Debug,
 {
-    std::env::var(name)
-        .unwrap_or(default.to_owned())
-        .parse()
-        .unwrap()
+    let given = std::env::var(name).unwrap_or(default.to_owned());
+    match given.parse() {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            error!("Invalid config option `{}={}`: {:?} ({}'s default is usually {})", name, given, e, name, default);
+            std::process::exit(1);
+        }
+    }
 }
 
 lazy_static! {
@@ -49,6 +53,8 @@ lazy_static! {
     static ref DB_PASSWORD: String = var("DB_PASSWORD", "dev");
     static ref DB_NAME: String = var("DB_NAME", "zling-backend");
     static ref DB_POOL_MAX_CONNS: u32 = var("DB_POOL_MAX_CONNS", "5");
+
+    pub static ref BIND_ADDR: SocketAddr = var("BIND_ADDR", "127.0.0.1:8080");
 
     pub static ref MEDIA_PATH: String = {
         let path: String = var("MEDIA_PATH", "/var/tmp/zling-media");
@@ -141,6 +147,10 @@ pub fn db_conn_string() -> String {
     )
 }
 
+pub fn bind_addr() -> (IpAddr, u16) {
+    (BIND_ADDR.ip(), BIND_ADDR.port())
+}
+
 pub fn initialize_all() {
     lazy_static::initialize(&RTC_PORT_MIN);
     lazy_static::initialize(&RTC_PORT_MAX);
@@ -164,6 +174,7 @@ pub fn initialize_all() {
         panic!("PREFER_UDP cannot be true if ENABLE_UDP is false");
     }
 
+    lazy_static::initialize(&BIND_ADDR);
     lazy_static::initialize(&DB_HOST);
     lazy_static::initialize(&DB_PORT);
     lazy_static::initialize(&DB_USER);
@@ -198,8 +209,5 @@ pub fn print_all() {
         *DB_NAME, *DB_HOST, *DB_PORT, *DB_POOL_MAX_CONNS
     );
 
-    info!(
-        "config: Uploaded media stored in: {}",
-        *MEDIA_PATH
-    );
+    info!("config: Uploaded media stored in: {}", *MEDIA_PATH);
 }
