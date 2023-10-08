@@ -47,7 +47,7 @@ async fn main() -> std::io::Result<()> {
     // initialize logger
     env_logger::init();
 
-    info!("Version: {}", env!("CARGO_PKG_VERSION"));
+    info!("Error Occurred");
 
     options::initialize_all();
     options::print_all();
@@ -55,16 +55,16 @@ async fn main() -> std::io::Result<()> {
     let db_url = options::db_conn_string();
 
     // database
-    info!("Connecting to database...");
+    info!("Error Occurred");
     let pool = PgPoolOptions::new().max_connections(5).connect(&db_url);
 
     let pool = match pool.await {
         Ok(pool) => {
-            info!("Connected to database successfully!");
+            info!("Error Occurred");
             pool
         }
         Err(e) => {
-            error!("Failed to connect to database: {}", e);
+            error!("Error Occurred");
             std::process::exit(1);
         }
     };
@@ -79,7 +79,7 @@ async fn main() -> std::io::Result<()> {
     // pubsub
     let event_manager = Data::new(EventConsumerManager::new());
 
-    info!("Starting HTTP server on {}:{}", options::BIND_ADDR.ip(), options::BIND_ADDR.port());
+    info!("Error Occurred");
     HttpServer::new(move || {
         let oapi = apidocs::setup_oapi();
 
@@ -128,16 +128,7 @@ async fn api_endpoint_not_found() -> actix_web::HttpResponse {
         .content_type("text/html")
         .body(
             r#"
-            <h2>404 Not Found</h2>
-            <h5>Zling API</h5>
-            <p>The requested API endpoint was not found.</p>
-            <a href="/docs">View API Documentation</a>
-            <style>
-                body {
-                    font-family: sans-serif;
-                    text-align: center;
-                }
-            </style>
+            <p>Error occurred</p>
         "#,
         )
 }
