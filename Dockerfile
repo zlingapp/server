@@ -25,7 +25,12 @@ RUN cargo build --release
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
-USER 1000
+RUN useradd zling -d /app && mkdir -p /app && chown -R zling:zling /app
+RUN mkdir -p /var/lib/zling-media && chown -R zling:zling /var/lib/zling-media
+
+USER zling
 COPY --from=builder /app/target/release/zling-server /app/server
+
+VOLUME /var/lib/zling-media
 
 ENTRYPOINT ["/app/server"]

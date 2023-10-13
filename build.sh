@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-./dev/setup_db.sh
+./setupdb.sh
 
 if [ $? -ne 0 ]; then
     echo "error: Failed to setup database, stopping build."
