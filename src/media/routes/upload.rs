@@ -138,7 +138,7 @@ pub async fn upload(
             }
         }
 
-        let url = format!("/api/media/{}/{}", id, filename);
+        let url = format!("/media/{}/{}", id, filename);
         return Ok(Json(UploadedFileInfo {
             id,
             name: filename,
