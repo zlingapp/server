@@ -9,12 +9,17 @@ license = "GPL-3.0"
 [dependencies]
 # async stuff
 futures = "0.3.28"
-actix-rt = "2.8.0"
-tokio = { version = "1.28.1", features = ["fs"] }
+actix-rt = "2.9.0"
+tokio = { version = "1.33.0", features = ["fs"] }
 
 # http framework
-actix-web = "4.3.1"
+actix-web = { version = "4.4.0", features = ["rustls-0_21"] }
 actix-ws = "0.2.5"
+actix-cors = "0.6.4"
+
+# TLS via Rustls
+rustls = "0.21"
+rustls-pemfile = "1"
 
 # voice chat
 mediasoup = "0.11.4"
@@ -24,12 +29,12 @@ sqlx = { version = "0.6.2", features = [ "runtime-actix-rustls", "postgres", "ma
 
 # media api related
 actix-files = "0.6.2"
-actix-multipart = "0.6.0"
+actix-multipart = "0.6.1"
 mime = "0.3.17"
 
 # openapi documentation
-utoipa = { version = "3.4.4", features = ["actix_extras", "chrono", "uuid"] }
-utoipa-rapidoc = { version = "0.1.0", features = ["actix-web"] }
+utoipa = { version = "4.0.0", features = ["actix_extras", "chrono", "uuid"] }
+utoipa-rapidoc = { version = "1.0.0", features = ["actix-web"] }
 
 # utility
 derive_more = "0.99.17"
@@ -38,7 +43,7 @@ regex = "1.8.1"
 
 # logging
 env_logger = "0.10.0"
-log = "0.4.17"
+log = "0.4.20"
 
 # id generation
 nanoid = "0.4.0"        # for generating general object ids
@@ -46,13 +51,13 @@ uuid = "1.3.1"          # sometimes needed for mediasoup
 
 # crypto
 rand = "0.8.5"          # csprng
-rust-argon2 = "1.0.0"   # password hash
-sha2 = "0.10.6"
+rust-argon2 = "1.0.1"   # password hash
+sha2 = "0.10.8"
 hex = "0.4.3"           # for parsing the token signing key 
 hmac = "0.12.1"         # for signing tokens
 base64-url = "2.0.0"    # for encoding tokens
 
 # serde
-serde = "1.0.160"
-serde_json = { version = "1.0.95", features = ["raw_value"] }
-chrono = { version = "0.4.24", features = ["serde"] }
+serde = "1.0.190"
+serde_json = { version = "1.0.107", features = ["raw_value"] }
+chrono = { version = "0.4.31", features = ["serde"] }

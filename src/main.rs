@@ -1,5 +1,6 @@
 use std::{collections::HashMap, env, sync::Mutex};
 
+use actix_cors::Cors;
 use actix_web::{
     web::{self, Data},
     App, HttpServer,
@@ -84,12 +85,25 @@ async fn main() -> std::io::Result<()> {
         options::BIND_ADDR.ip(),
         options::BIND_ADDR.port()
     );
+    info!(
+        "Starting HTTPS server on {}:{} (via Rustls)",
+        options::SSL_BIND_ADDR.ip(),
+        options::SSL_BIND_ADDR.port()
+    );
     HttpServer::new(move || {
         let oapi = apidocs::setup_oapi();
+
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .supports_credentials();
 
         App::new()
             // logging
             .wrap(actix_web::middleware::Logger::new("%{r}a %r -> %s in %Dms").log_target("http"))
+            // cors acess
+            .wrap(cors)
             // database
             .app_data(Data::clone(&pool))
             // authentication
@@ -123,6 +137,7 @@ async fn main() -> std::io::Result<()> {
     })
     .workers(2)
     .bind(options::bind_addr())?
+    .bind_rustls_021(options::ssl_bind_addr(), options::ssl_config())?
     .run()
     .await
 }

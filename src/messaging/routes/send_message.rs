@@ -138,7 +138,7 @@ async fn send_message(
             username: user.0.name,
             avatar: user.0.avatar,
         },
-        created_at: DateTime::<Utc>::from_utc(record.created_at, Utc),
+        created_at: DateTime::<Utc>::from_naive_utc_and_offset(record.created_at, Utc),
     };
 
     // tell people listening to this channel that there's a new message

@@ -31,7 +31,6 @@ impl FromStr for Topic {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-// rename all variants to lowercase
 pub enum TopicType {
     /// Updates to a guild, e.g. name, icon, etc...
     /// Channel list, etc...

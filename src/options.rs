@@ -1,4 +1,6 @@
 use std::{
+    fs::File,
+    io::BufReader,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     num::{NonZeroU32, NonZeroU8},
     str::FromStr,
@@ -16,6 +18,7 @@ use mediasoup::{
     webrtc_transport::{TransportListenIps, WebRtcTransportOptions},
     worker::{WorkerLogLevel, WorkerSettings},
 };
+use rustls::ServerConfig;
 
 // get and parse an environment variable
 // use default value if not set
@@ -58,6 +61,10 @@ lazy_static! {
     static ref DB_POOL_MAX_CONNS: u32 = var("DB_POOL_MAX_CONNS", "5");
 
     pub static ref BIND_ADDR: SocketAddr = var("BIND_ADDR", "127.0.0.1:8080");
+
+    pub static ref SSL_BIND_ADDR: SocketAddr = var("SSL_BIND_ADDR", "127.0.0.1:8443");
+    pub static ref SSL_CERT_PATH: String = var("SSL_CERT_PATH", "cert.pem");
+    pub static ref SSL_KEY_PATH: String = var("SSL_KEY_PATH", "key.pem");
 
     pub static ref MEDIA_PATH: String = {
         let path: String = var("MEDIA_PATH", "/var/tmp/zling-media");
@@ -154,6 +161,45 @@ pub fn bind_addr() -> (IpAddr, u16) {
     (BIND_ADDR.ip(), BIND_ADDR.port())
 }
 
+pub fn ssl_bind_addr() -> (IpAddr, u16) {
+    (SSL_BIND_ADDR.ip(), SSL_BIND_ADDR.port())
+}
+
+/// Load the SSL certificate and key files into a rustls config object
+/// 
+/// Taken from https://github.com/actix/examples/blob/master/https-tls/rustls/src/main.rs
+pub fn ssl_config() -> rustls::ServerConfig {
+    // init server config builder with safe defaults
+    let config = ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth();
+
+    // load TLS key/cert files
+    let cert_file = &mut BufReader::new(File::open(&*SSL_CERT_PATH).unwrap());
+    let key_file = &mut BufReader::new(File::open(&*SSL_KEY_PATH).unwrap());
+
+    // convert files to key/cert objects
+    let cert_chain = rustls_pemfile::certs(cert_file)
+        .unwrap()
+        .into_iter()
+        .map(rustls::Certificate)
+        .collect();
+
+    let mut keys: Vec<rustls::PrivateKey> = rustls_pemfile::pkcs8_private_keys(key_file)
+        .unwrap()
+        .into_iter()
+        .map(rustls::PrivateKey)
+        .collect();
+
+    // exit if no keys could be parsed
+    if keys.is_empty() {
+        error!("Could not locate SSL private key at {}", *SSL_KEY_PATH);
+        std::process::exit(1);
+    }
+
+    config.with_single_cert(cert_chain, keys.remove(0)).unwrap()
+}
+
 pub fn initialize_all() {
     lazy_static::initialize(&RTC_PORT_MIN);
     lazy_static::initialize(&RTC_PORT_MAX);
@@ -178,6 +224,11 @@ pub fn initialize_all() {
     }
 
     lazy_static::initialize(&BIND_ADDR);
+    
+    lazy_static::initialize(&SSL_BIND_ADDR);
+    lazy_static::initialize(&SSL_CERT_PATH);
+    lazy_static::initialize(&SSL_KEY_PATH);
+
     lazy_static::initialize(&DB_HOST);
     lazy_static::initialize(&DB_PORT);
     lazy_static::initialize(&DB_USER);

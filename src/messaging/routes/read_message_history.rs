@@ -127,7 +127,7 @@ async fn read_message_history(
                 id: record.id.clone(),
                 content: record.content.clone(),
                 attachments,
-                created_at: DateTime::<Utc>::from_utc(record.created_at, Utc),
+                created_at: DateTime::<Utc>::from_naive_utc_and_offset(record.created_at, Utc),
                 author: PublicUserInfo {
                     id: record.author_id.clone(),
                     username: record.author_username.clone(),

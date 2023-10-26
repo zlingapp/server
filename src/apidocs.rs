@@ -22,8 +22,8 @@ pub struct ApiDocs;
 pub fn setup_oapi() -> utoipa::openapi::OpenApi {
     let mut oapi = ApiDocs::openapi();
     oapi.servers = Some(vec![
-        ServerBuilder::new().url("/api").build(),
         ServerBuilder::new().url("/").build(),
+        ServerBuilder::new().url("/api").build(),
     ]);
 
     oapi.merge(AuthApiDocs::openapi());
