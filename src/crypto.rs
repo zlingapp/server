@@ -46,6 +46,6 @@ pub fn sign(key: &[u8], data: &[u8]) -> Vec<u8> {
 pub fn verify_signature(key: &[u8], data: &[u8], signature: &[u8]) -> bool {
     let mut mac = HmacSha256::new_from_slice(key).unwrap();
     mac.update(data);
-    
+
     mac.verify_slice(signature).is_ok()
 }

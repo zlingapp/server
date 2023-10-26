@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -12,10 +12,7 @@ pub struct Topic {
 
 impl Topic {
     pub fn new(r#type: TopicType, id: String) -> Self {
-        Self {
-            r#type,
-            id,
-        }
+        Self { r#type, id }
     }
 }
 

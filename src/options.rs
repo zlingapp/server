@@ -5,7 +5,7 @@ use std::{
 };
 
 use lazy_static::lazy_static;
-use log::{info, warn, error};
+use log::{error, info, warn};
 use mediasoup::{
     prelude::ListenIp,
     router::RouterOptions,
@@ -28,7 +28,10 @@ where
     match given.parse() {
         Ok(parsed) => parsed,
         Err(e) => {
-            error!("Invalid config option `{}={}`: {:?} ({}'s default is usually {})", name, given, e, name, default);
+            error!(
+                "Invalid config option `{}={}`: {:?} ({}'s default is usually {})",
+                name, given, e, name, default
+            );
             std::process::exit(1);
         }
     }

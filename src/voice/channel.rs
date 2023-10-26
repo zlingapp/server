@@ -69,7 +69,7 @@ impl VoiceChannel {
 
         // remove the client from the global clients map
         let removed = global_clients.lock().unwrap().remove(client_identity);
-        
+
         if removed.is_none() {
             // this should never happen in theory
             warn!(

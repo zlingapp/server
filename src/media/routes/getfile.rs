@@ -21,7 +21,7 @@ pub struct FileIdentifierPath {
 struct OApiFileResponse {}
 
 /// Download file
-/// 
+///
 /// Retreives the requested file's contents bit-for-bit as it was when uploaded.
 /// This endpoint does not currently require authentication, which means that
 /// external references to images hosted on Zling can be made.

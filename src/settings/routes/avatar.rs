@@ -1,4 +1,9 @@
-use actix_web::{error::{ErrorInternalServerError, ErrorBadRequest}, post, web::Json, Error, HttpResponse};
+use actix_web::{
+    error::{ErrorBadRequest, ErrorInternalServerError},
+    post,
+    web::Json,
+    Error, HttpResponse,
+};
 use log::warn;
 use serde::Deserialize;
 
@@ -19,7 +24,7 @@ pub async fn set_avatar(
     if !req.avatar.starts_with("/api/media/") {
         return Err(ErrorBadRequest("invalid_avatar"));
     }
-    
+
     // alter avatar in db
     let result = sqlx::query!(
         r#"

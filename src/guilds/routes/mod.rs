@@ -1,13 +1,13 @@
 use actix_web::web::Path;
 use serde::Deserialize;
-use utoipa::{OpenApi, IntoParams};
+use utoipa::{IntoParams, OpenApi};
 
 pub mod create_guild;
 pub mod delete_guild;
 pub mod join_guild;
 pub mod list_joined_guilds;
-pub mod update_guild;
 pub mod list_members;
+pub mod update_guild;
 
 #[derive(Deserialize, IntoParams)]
 pub struct GuildIdParams {

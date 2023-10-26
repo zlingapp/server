@@ -11,12 +11,13 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::{
+    auth::user::PublicUserInfo,
     realtime::socket::{SendFailureReason, Socket},
     voice::{
         channel::VoiceChannel,
         client::{VoiceClient, VoiceClientEx},
         VoiceChannels, VoiceClients,
-    }, auth::user::PublicUserInfo,
+    },
 };
 
 #[derive(Deserialize)]
@@ -30,20 +31,20 @@ pub struct IdAndToken {
 }
 
 /// Voice WebSocket
-/// 
+///
 /// Connect to this to receive real-time events about peers in the current voice
 /// chat. Connection is mandatory and must be made within 10 seconds of a
 /// `/voice/join` request.
-/// 
+///
 /// As `WebSocket`s in the browser are unable to supply additional headers, the
 /// RTC Identity and Token must be sent in the query parameters of the intitial
 /// request, in the form `?i=identity` and `?t=token`.
-/// 
+///
 /// ## Messages
 /// The connection is read-only, client to server signalling does not happen
 /// over this socket at all. These are the messages your client may receive and
 /// should respond to.
-/// 
+///
 /// #### Peer Joined
 /// ```js
 /// {
@@ -52,7 +53,7 @@ pub struct IdAndToken {
 ///     "user": { ... }, // contains id, name, avatar, etc.
 /// }
 /// ```
-/// 
+///
 /// #### Peer Disconnected
 /// ```js
 /// {
@@ -60,7 +61,7 @@ pub struct IdAndToken {
 ///     "identity": "YDjdIc06vuaVQZy4LS7hb",
 /// }
 /// ```
-/// 
+///
 /// #### New Producer
 /// A peer created a new producer, you may consume it.
 /// ```js

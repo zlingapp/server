@@ -51,7 +51,7 @@ pub async fn create_bot(
     if !USERNAME_REGEX.is_match(&req.username) {
         return Err(ErrorBadRequest("invalid_username"));
     }
-    
+
     // todo: better check here
     if !req.avatar.starts_with("/api/media/") {
         return Err(ErrorBadRequest("invalid_avatar"));
@@ -73,7 +73,8 @@ pub async fn create_bot(
     )
     .execute(&db.pool)
     .await
-    .map_err(|_| ErrorInternalServerError(""))?.rows_affected();
+    .map_err(|_| ErrorInternalServerError(""))?
+    .rows_affected();
 
     if rows_affected != 1 {
         return Err(ErrorConflict("username_taken"));

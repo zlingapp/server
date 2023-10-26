@@ -6,7 +6,7 @@ use actix_web::error::ErrorInternalServerError;
 use actix_web::FromRequest;
 
 use futures::Future;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{auth::access_token::AccessToken, db::DB};

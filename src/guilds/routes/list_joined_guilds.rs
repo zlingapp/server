@@ -16,10 +16,10 @@ pub struct GuildInfo {
 }
 
 /// List Joined Guilds
-/// 
+///
 /// List all guilds that the user is a member of. This is used to populate the
 /// guild list on the client for the first time.
-/// 
+///
 /// Returned information is limited to the guild ID, name, and icon.
 #[utoipa::path(
     responses(

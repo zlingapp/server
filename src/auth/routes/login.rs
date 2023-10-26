@@ -28,7 +28,7 @@ pub struct LoginResponese {
 }
 
 /// Log in
-/// 
+///
 /// Log in using an email address and password and get an access token and refresh token
 /// as well as a new `User` object. You may use the access token to authenticate yourself
 /// for other endpoints, and the refresh token to get a new access token when the old one
@@ -65,7 +65,7 @@ pub async fn login(
             user,
             access_token,
             refresh_token,
-        } => Ok(HttpResponse::Ok().json(LoginResponese{
+        } => Ok(HttpResponse::Ok().json(LoginResponese {
             user: user,
             access_token: access_token,
             refresh_token: refresh_token,

@@ -1,6 +1,7 @@
 use std::{
+    hash::{Hash, Hasher},
     sync::{Arc, Mutex, RwLock, Weak},
-    time::Duration, hash::{Hash, Hasher},
+    time::Duration,
 };
 
 use actix_rt::{task::JoinHandle, time::sleep};
@@ -11,7 +12,7 @@ use lazy_static::lazy_static;
 
 pub type Callback<T> = Box<dyn Fn(T) -> () + Send + Sync>;
 
-lazy_static!{
+lazy_static! {
     static ref SOCKET_LAST_PING_TIMEOUT: Duration = Duration::from_secs(30);
 }
 
@@ -34,7 +35,7 @@ pub enum SendFailureReason {
 pub struct Socket {
     /// Internal nanoid, randomly generated.
     pub id: String,
-    
+
     session: RwLock<Option<actix_ws::Session>>,
     watchdog_handle: Mutex<Option<JoinHandle<()>>>,
     /// The last time we received a ping from the client.
@@ -82,7 +83,7 @@ impl Socket {
                     Some(strong) => strong,
                     None => return,
                 };
-                
+
                 // process message
                 match msg {
                     Message::Ping(bytes) => {

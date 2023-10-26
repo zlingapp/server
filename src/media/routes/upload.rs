@@ -12,7 +12,7 @@ use log::warn;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
-use utoipa::{ToSchema};
+use utoipa::ToSchema;
 
 use crate::{
     auth::access_token::AccessToken,
@@ -49,11 +49,11 @@ pub enum UploadedFileType {
 #[derive(ToSchema)]
 pub struct UploadFormRequest {
     #[allow(dead_code)]
-    file: [u8]
+    file: [u8],
 }
 
 /// Upload file
-/// 
+///
 /// Use this endpoint to upload attachments to be hosted on the Zling media
 /// server. If your file name is not ASCII alphanumeric, it will be cleaned
 /// first before it is saved. You must not exceed the Zling server's filesize
@@ -70,7 +70,7 @@ pub struct UploadFormRequest {
         (status = OK, description = "File uploaded", body = UploadedFileInfo),
         (status = BAD_REQUEST, description = "Invalid file supplied (eg. name could not be cleaned)"),
         (status = PAYLOAD_TOO_LARGE, description = "The file exceeds the server's size limit")
-    )    
+    )
 )]
 #[post("/media/upload")]
 pub async fn upload(

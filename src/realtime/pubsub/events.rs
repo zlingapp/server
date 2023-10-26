@@ -49,22 +49,18 @@ pub struct TokenInQuery {
 #[serde(tag = "type")]
 pub enum EventSocketRequest {
     #[serde(rename = "sub")]
-    Subscribe {
-        topics: Vec<Topic>
-    },
+    Subscribe { topics: Vec<Topic> },
     #[serde(rename = "unsub")]
-    Unsubscribe {
-        topics: Vec<Topic>
-    },
+    Unsubscribe { topics: Vec<Topic> },
 }
 
 /// Event socket
-/// 
+///
 /// Used to subscribe to certain generators of events (called "topics") and
 /// receive information within these topics.
-/// 
+///
 /// For example, this is used to receive messages from others in real time.
-/// 
+///
 /// ## Subscribing
 /// Subscribe to the topic of type `channel` with id `j_NNyhSbOl1AwqCTMAZ2G`.
 /// ```js
@@ -73,10 +69,10 @@ pub enum EventSocketRequest {
 ///     "topics": [{ "id": "j_NNyhSbOl1AwqCTMAZ2G", "type": "channel" } }]
 /// }
 /// ```
-/// 
+///
 /// Zling will now notify you about messages sent in channel
 /// `j_NNyhSbOl1AwqCTMAZ2G` and updates to the channel itself.
-/// 
+///
 /// Here is what an event of type `message` might look like.
 /// ```js
 /// {
@@ -97,7 +93,7 @@ pub enum EventSocketRequest {
 ///     },
 /// }
 /// ```
-/// 
+///
 /// ### Unsubscribing
 /// Unsubscribing to topics is quite similar. It can be done like so:
 /// ```js

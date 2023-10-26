@@ -53,14 +53,14 @@ pub struct ProduceReply {
 pub type ProduceResponse = Result<Json<ProduceReply>, ProduceError>;
 
 /// Produce
-/// 
+///
 /// Satisfies a clientside `send` transport's `produce` event by creating a
 /// server-side producer. This allows you to advertise that you are exporting an
 /// audio or video stream for everyone else to tune in to.
-/// 
+///
 /// Connected peers are notified of the creation of this producer, and it can be
 /// discovered through the peers list endpoint, ready to be `consume()`d.
-/// 
+///
 /// This endpoint requires a created and connected `send` transport.
 #[utoipa::path(
     tag = "voice",
@@ -71,7 +71,10 @@ pub type ProduceResponse = Result<Json<ProduceReply>, ProduceError>;
     )
 )]
 #[post("/voice/produce")]
-pub async fn handle_produce(client: VoiceClientEx, request: Json<ProduceRequest>) -> ProduceResponse {
+pub async fn handle_produce(
+    client: VoiceClientEx,
+    request: Json<ProduceRequest>,
+) -> ProduceResponse {
     if client.c2s_transport.read().unwrap().is_none() {
         return Err(ProduceError::TransportNotCreated);
     }
@@ -114,7 +117,10 @@ pub async fn handle_produce(client: VoiceClientEx, request: Json<ProduceRequest>
         .unwrap()
         .insert(id.clone(), producer);
 
-    client.channel.notify_new_producer(&client, id.clone(), kind).await;
+    client
+        .channel
+        .notify_new_producer(&client, id.clone(), kind)
+        .await;
 
     Ok(Json(ProduceReply { id }))
 }

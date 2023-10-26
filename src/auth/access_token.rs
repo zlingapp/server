@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::{ops::Deref, pin::Pin};
 
 use actix_web::FromRequest;
-use chrono::{Utc, DateTime};
+use chrono::{DateTime, Utc};
 use derive_more::{Display, Error};
 use futures::Future;
 use utoipa::ToSchema;

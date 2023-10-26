@@ -1,15 +1,15 @@
 use actix_web::{
     delete,
-    error::{ErrorInternalServerError, ErrorForbidden},
+    error::{ErrorForbidden, ErrorInternalServerError},
     HttpResponse,
 };
 use log::warn;
 
-use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath};
 use crate::guilds::routes::GuildIdParams;
+use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath};
 
 /// Delete a Guild
-/// 
+///
 /// This endpoint requires the user to be the owner of the guild.
 #[utoipa::path(
     params(GuildIdParams),

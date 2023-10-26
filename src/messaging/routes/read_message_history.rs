@@ -34,9 +34,9 @@ struct ReadHistoryPath {
 const MAX_MESSAGE_LIMIT: i64 = 50;
 
 /// Read message history
-/// 
+///
 /// Get the messages in the channel sent in between `after` and `before`, up to
-/// a limit of `limit`. The maximum value of `limit` can be 
+/// a limit of `limit`. The maximum value of `limit` can be
 #[utoipa::path(
     tag = "messaging",
     security(("token" = [])),

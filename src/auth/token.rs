@@ -52,7 +52,9 @@ impl ToSchema<'_> for Token {
         utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
     ) {
         let mut obj = Object::with_type(SchemaType::String);
-        obj.example = Some(json!("xoKM4W7NDqHjK_V0g9s3y.ZN7jGQ.iIuDsgiT4s2ehQ-3ATImimyPUoooTPC1ytqqQuPQSJU"));
+        obj.example = Some(json!(
+            "xoKM4W7NDqHjK_V0g9s3y.ZN7jGQ.iIuDsgiT4s2ehQ-3ATImimyPUoooTPC1ytqqQuPQSJU"
+        ));
 
         ("Token", RefOr::T(Schema::Object(obj)))
     }

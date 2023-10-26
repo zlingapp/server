@@ -1,6 +1,13 @@
 use utoipa::OpenApi;
 
-use self::{connect_transport::ConnectTransportRequest, consume::{ConsumeRequest, ConsumeReply}, create_transport::CreateTransportReply, list_vc_peers::ChannelMemberInfo, join_vc::JoinVcReply, produce::{ProduceReply, ProduceRequest}};
+use self::{
+    connect_transport::ConnectTransportRequest,
+    consume::{ConsumeReply, ConsumeRequest},
+    create_transport::CreateTransportReply,
+    join_vc::JoinVcReply,
+    list_vc_peers::ChannelMemberInfo,
+    produce::{ProduceReply, ProduceRequest},
+};
 use super::transport::TransportType;
 
 pub mod connect_transport;

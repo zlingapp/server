@@ -3,7 +3,7 @@ use actix_web::{get, web::Json};
 use crate::auth::user::{User, UserEx};
 
 /// Who am I?
-/// 
+///
 /// Get the current user.
 #[utoipa::path(
     responses(

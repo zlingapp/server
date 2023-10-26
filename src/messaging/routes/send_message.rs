@@ -45,7 +45,7 @@ struct SendMessagePath {
 }
 
 /// Send message
-/// 
+///
 /// Sends a message with text `content` and with optional attachments.
 #[utoipa::path(
     tag = "messaging",

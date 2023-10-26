@@ -8,7 +8,7 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{auth::access_token::AccessToken, db::DB, security, channels::channel::ChannelType};
+use crate::{auth::access_token::AccessToken, channels::channel::ChannelType, db::DB, security};
 
 #[derive(Deserialize, ToSchema)]
 pub struct CreateGuildRequest {
@@ -24,14 +24,14 @@ pub struct CreateGuildResponse {
     id: String,
 }
 /// Create Guild
-/// 
+///
 /// Creates a new guild with the given name and icon. The user will be the owner
 /// of the guild.
-/// 
+///
 /// Default channels will be created for the guild:
 /// - A text channel named "general"
 /// - A voice channel named "Voice Chat"
-/// 
+///
 /// The user will be automatically added to the guild as the owner.
 #[utoipa::path(
     responses(
@@ -115,7 +115,9 @@ pub async fn create_guild(
             ChannelType::Text as ChannelType
         ),
         &mut tx,
-    ).await.map_err(|e| {
+    )
+    .await
+    .map_err(|e| {
         warn!(
             "failed to create default text channel when creating guild {}: {}",
             guild_id, e
@@ -132,7 +134,9 @@ pub async fn create_guild(
             ChannelType::Voice as ChannelType
         ),
         &mut tx,
-    ).await.map_err(|e| {
+    )
+    .await
+    .map_err(|e| {
         warn!(
             "failed to create default voice channel when creating guild {}: {}",
             guild_id, e

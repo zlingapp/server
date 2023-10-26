@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Copy, Clone, sqlx::Type, Serialize, Deserialize, Debug, ToSchema)]

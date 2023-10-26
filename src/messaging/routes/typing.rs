@@ -1,6 +1,6 @@
 use actix_web::{
-    error::ErrorForbidden,
     error::Error,
+    error::ErrorForbidden,
     post,
     web::{Data, Path},
     HttpResponse,
@@ -17,7 +17,7 @@ pub struct TypingPath {
 }
 
 /// Typing
-/// 
+///
 /// Notify the target channel that you are typing a message. Please call this
 /// endpoint every `4s` while the user is still typing to maintain their status.
 #[utoipa::path(
@@ -41,7 +41,7 @@ pub async fn typing(
         .await
         .unwrap()
     {
-        return Err(ErrorForbidden("access_denied"))
+        return Err(ErrorForbidden("access_denied"));
     }
 
     ecm.send_typing(&path.channel_id, &user).await;

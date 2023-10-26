@@ -1,4 +1,8 @@
-use actix_web::{error::{ErrorInternalServerError, ErrorForbidden}, get, web::Json};
+use actix_web::{
+    error::{ErrorForbidden, ErrorInternalServerError},
+    get,
+    web::Json,
+};
 use chrono::Utc;
 use log::error;
 
@@ -37,8 +41,9 @@ pub async fn list_bots(
         ErrorInternalServerError("")
     })?;
 
-    let details = rows.iter().map(|row| {
-        BotDetails {
+    let details = rows
+        .iter()
+        .map(|row| BotDetails {
             user: PublicUserInfo {
                 id: row.id.clone(),
                 username: row.name.clone(),
@@ -49,8 +54,8 @@ pub async fn list_bots(
                 expires: row.expires_at.and_local_timezone(Utc).single().unwrap(),
                 proof: row.nonce.clone(),
             },
-        }
-    }).collect();
+        })
+        .collect();
 
     Ok(Json(details))
 }

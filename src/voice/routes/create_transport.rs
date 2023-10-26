@@ -73,12 +73,12 @@ impl ResponseError for CreateTransportError {
 pub type CreateTransportResponse = Result<Json<CreateTransportReply>, CreateTransportError>;
 
 /// Create WebRTC transport
-/// 
+///
 /// Allocate a server-side client or serverbound mediasoup WebRTC transport. The
 /// direction of the transport is specified in the `type` parameter. You may
 /// only create one `send` or `recv` transport per voice connection, and any
 /// duplicate requests will be met with `409 Conflict`.
-/// 
+///
 /// A call to create a transport should be followed by a call to connect the
 /// transport. To send voice data, you must create and connect a `send`
 /// transport. Conversely, to receive voice data, you must create and connect a

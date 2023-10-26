@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use actix_web::{
-    error::{ErrorConflict, ErrorInternalServerError, ErrorBadRequest},
+    error::{ErrorBadRequest, ErrorConflict, ErrorInternalServerError},
     post,
     web::Json,
     Error, HttpResponse,
@@ -31,7 +31,7 @@ pub struct RegisterRequest {
 }
 
 /// Register
-/// 
+///
 /// Register a new user account using an email address and password.
 /// Does not log the user in automatically, please use the login endpoint for that
 #[utoipa::path(

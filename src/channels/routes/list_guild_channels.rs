@@ -1,5 +1,5 @@
 use actix_web::{
-    error::{ErrorInternalServerError, ErrorForbidden},
+    error::{ErrorForbidden, ErrorInternalServerError},
     get,
     web::Json,
     Error,
@@ -8,11 +8,11 @@ use log::warn;
 use serde::Serialize;
 use utoipa::ToSchema;
 
+use crate::guilds::routes::GuildIdParams;
 use crate::{
     auth::access_token::AccessToken, channels::channel::ChannelType, db::DB,
     guilds::routes::GuildPath,
 };
-use crate::guilds::routes::GuildIdParams;
 
 #[derive(Serialize, ToSchema)]
 pub struct ChannelInfo {
@@ -24,7 +24,7 @@ pub struct ChannelInfo {
 }
 
 /// List Guild Channels
-/// 
+///
 /// List all channels in a guild. This endpoint requires the user to be in the
 /// guild of the channel, and have sufficient permissions to view the channel.
 #[utoipa::path(

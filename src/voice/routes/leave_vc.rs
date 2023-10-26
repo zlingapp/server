@@ -3,7 +3,7 @@ use actix_web::{get, web::Data, Error, HttpResponse};
 use crate::voice::{client::VoiceClientEx, VoiceChannels, VoiceClients};
 
 /// Leave voice chat
-/// 
+///
 /// Destroys server-side mediasoup objects, closes any ongoing voice
 /// connections, revokes your credentials and notifies everyone you left. Call
 /// this endpoint after gracefully `close()`-ing your clientside objects.

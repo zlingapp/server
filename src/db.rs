@@ -4,7 +4,7 @@ use futures::TryFutureExt;
 use sqlx::query;
 use sqlx::{Pool, Postgres};
 
-use crate::auth::user::{User, PublicUserInfo};
+use crate::auth::user::{PublicUserInfo, User};
 use crate::crypto;
 use crate::messaging::message::Message;
 

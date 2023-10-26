@@ -16,6 +16,7 @@ use crate::{db::DB, realtime::pubsub::consumer_manager::EventConsumerManager};
 
 mod apidocs;
 mod auth;
+mod bot;
 mod channels;
 mod crypto;
 mod db;
@@ -28,7 +29,6 @@ mod security;
 mod settings;
 mod util;
 mod voice;
-mod bot;
 
 // shortcut to make a Mutexed String to T hashmap
 pub type MutexMap<T> = Mutex<HashMap<String, T>>;
@@ -79,7 +79,11 @@ async fn main() -> std::io::Result<()> {
     // pubsub
     let event_manager = Data::new(EventConsumerManager::new());
 
-    info!("Starting HTTP server on {}:{}", options::BIND_ADDR.ip(), options::BIND_ADDR.port());
+    info!(
+        "Starting HTTP server on {}:{}",
+        options::BIND_ADDR.ip(),
+        options::BIND_ADDR.port()
+    );
     HttpServer::new(move || {
         let oapi = apidocs::setup_oapi();
 

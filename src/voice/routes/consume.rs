@@ -4,7 +4,7 @@ use actix_web::web::Json;
 use derive_more::{Display, Error};
 use log::error;
 use mediasoup::prelude::ConsumerOptions;
-use mediasoup::rtp_parameters::{RtpCapabilities, RtpParameters, MediaKind};
+use mediasoup::rtp_parameters::{MediaKind, RtpCapabilities, RtpParameters};
 use mediasoup::{producer::ProducerId, transport::Transport};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -63,12 +63,12 @@ pub struct ConsumeReply {
 pub type ConsumeResponse = Result<Json<ConsumeReply>, ConsumeError>;
 
 /// Consume
-/// 
+///
 /// Satisfies a clientside `recv` transport's `consume` event by creating a
 /// server-side consumer for a certain server-side producer. In other words, it
 /// allows you to receive the data of a producer, which is usually owned by
 /// another peer, which lets you receive the peer's audio/video.
-/// 
+///
 /// This endpoint requires a created and connected `recv` transport.
 #[utoipa::path(
     tag = "voice",
@@ -79,7 +79,10 @@ pub type ConsumeResponse = Result<Json<ConsumeReply>, ConsumeError>;
     )
 )]
 #[post("/voice/consume")]
-pub async fn handle_consume(client: VoiceClientEx, request: Json<ConsumeRequest>) -> ConsumeResponse {
+pub async fn handle_consume(
+    client: VoiceClientEx,
+    request: Json<ConsumeRequest>,
+) -> ConsumeResponse {
     use ConsumeError::*;
 
     if client.s2c_transport.read().unwrap().is_none() {
