@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-./dev/setup_db.sh
+./setupdb.sh
 
 if [ $? -ne 0 ]; then
     echo "error: Failed to setup database, stopping build."
@@ -11,7 +11,7 @@ IMAGE_NAME=$1
 
 # if TAG is empty, then
 if [ -z "$IMAGE_NAME" ]; then
-    IMAGE_NAME="zling-server"
+    IMAGE_NAME="ghcr.io/zlingapp/server"
 fi 
 
 echo "Building image ${IMAGE_NAME}"
