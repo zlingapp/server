@@ -64,7 +64,7 @@ lazy_static! {
 
     pub static ref BIND_ADDR: SocketAddr = var("BIND_ADDR", "127.0.0.1:8080");
 
-    pub static ref SSL_ENABLE: bool = var("SSL_ENABLE", "true");
+    pub static ref SSL_ENABLE: bool = var("SSL_ENABLE", "false");
     pub static ref SSL_ONLY: bool = var("SSL_ONLY", "false");
     pub static ref SSL_BIND_ADDR: SocketAddr = var("SSL_BIND_ADDR", "127.0.0.1:8443");
     static ref SSL_CERT_PATH: String = var("SSL_CERT_PATH", "cert.pem");
