@@ -120,21 +120,21 @@ pub trait IntoHandlerErrorResult<T> {
 
 impl<T, E> IntoHandlerErrorResult<T> for Result<T, E> {
     fn or_err(self, code: u16) -> Result<T, HandlerError> {
-        Err(code.into())
+        self.or(Err(code.into()))
     }
 
     fn or_err_msg(self, code: u16, message: &'static str) -> Result<T, HandlerError> {
-        Err(HandlerError::from((code, message)))
+        self.or(Err(HandlerError::from((code, message))))
     }
 }
 
 impl<T> IntoHandlerErrorResult<T> for Option<T> {
     fn or_err(self, code: u16) -> Result<T, HandlerError> {
-        Err(code.into())
+        self.ok_or(code.into())
     }
 
     fn or_err_msg(self, code: u16, message: &'static str) -> Result<T, HandlerError> {
-        Err(HandlerError::from((code, message)))
+        self.ok_or(HandlerError::from((code, message)))
     }
 }
 
