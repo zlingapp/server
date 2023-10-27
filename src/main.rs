@@ -126,7 +126,7 @@ async fn main() -> std::io::Result<()> {
                     .path("/docs"),
             )
     })
-    .workers(2);
+    .workers(*options::NUM_WEB_WORKERS);
 
     if !*options::SSL_ONLY {
         info!(
