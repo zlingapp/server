@@ -2,6 +2,7 @@ use std::{collections::HashMap, env, sync::Mutex};
 
 use actix_cors::Cors;
 use actix_web::{
+    middleware::Condition,
     web::{self, Data},
     App, HttpServer,
 };
@@ -80,17 +81,7 @@ async fn main() -> std::io::Result<()> {
     // pubsub
     let event_manager = Data::new(EventConsumerManager::new());
 
-    info!(
-        "Starting HTTP server on {}:{}",
-        options::BIND_ADDR.ip(),
-        options::BIND_ADDR.port()
-    );
-    info!(
-        "Starting HTTPS server on {}:{} (via Rustls)",
-        options::SSL_BIND_ADDR.ip(),
-        options::SSL_BIND_ADDR.port()
-    );
-    HttpServer::new(move || {
+    let mut server = HttpServer::new(move || {
         let oapi = apidocs::setup_oapi();
 
         let cors = Cors::default()
@@ -103,7 +94,7 @@ async fn main() -> std::io::Result<()> {
             // logging
             .wrap(actix_web::middleware::Logger::new("%{r}a %r -> %s in %Dms").log_target("http"))
             // cors acess
-            .wrap(cors)
+            .wrap(Condition::new(*options::HANDLE_CORS, cors))
             // database
             .app_data(Data::clone(&pool))
             // authentication
@@ -135,11 +126,31 @@ async fn main() -> std::io::Result<()> {
                     .path("/docs"),
             )
     })
-    .workers(2)
-    .bind(options::bind_addr())?
-    .bind_rustls_021(options::ssl_bind_addr(), options::ssl_config())?
-    .run()
-    .await
+    .workers(2);
+
+    if !*options::SSL_ONLY {
+        info!(
+            "Starting HTTP server on {}:{}",
+            options::BIND_ADDR.ip(),
+            options::BIND_ADDR.port()
+        );
+        server = server.bind(options::bind_addr())?;
+    }
+
+    if *options::SSL_ENABLE {
+        info!(
+            "Starting HTTPS server on {}:{} (via rustls)",
+            options::SSL_BIND_ADDR.ip(),
+            options::SSL_BIND_ADDR.port()
+        );
+        server = server.bind_rustls_021(options::ssl_bind_addr(), options::ssl_config())?;
+    }
+
+    if !*options::HANDLE_CORS {
+        info!("CORS will not be handled: expecting a reverse proxy in front of this server");
+    }
+
+    server.run().await
 }
 
 async fn api_endpoint_not_found() -> actix_web::HttpResponse {

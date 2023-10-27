@@ -62,9 +62,13 @@ lazy_static! {
 
     pub static ref BIND_ADDR: SocketAddr = var("BIND_ADDR", "127.0.0.1:8080");
 
+    pub static ref SSL_ENABLE: bool = var("SSL_ENABLE", "true");
+    pub static ref SSL_ONLY: bool = var("SSL_ONLY", "false");
     pub static ref SSL_BIND_ADDR: SocketAddr = var("SSL_BIND_ADDR", "127.0.0.1:8443");
-    pub static ref SSL_CERT_PATH: String = var("SSL_CERT_PATH", "cert.pem");
-    pub static ref SSL_KEY_PATH: String = var("SSL_KEY_PATH", "key.pem");
+    static ref SSL_CERT_PATH: String = var("SSL_CERT_PATH", "cert.pem");
+    static ref SSL_KEY_PATH: String = var("SSL_KEY_PATH", "key.pem");
+
+    pub static ref HANDLE_CORS: bool = var("HANDLE_CORS", "true");
 
     pub static ref MEDIA_PATH: String = {
         let path: String = var("MEDIA_PATH", "/var/tmp/zling-media");
@@ -91,7 +95,8 @@ lazy_static! {
         } else {
             let key = hex::decode(tsk).unwrap();
             if key.len() != 32 {
-                panic!("Invalid token signing key length, must be 32 bytes");
+                error!("Invalid token signing key length, must be 32 bytes");
+                std::process::exit(1);
             }
             key.try_into().unwrap()
         }
@@ -212,15 +217,23 @@ pub fn initialize_all() {
     lazy_static::initialize(&PREFER_TCP);
 
     if *PREFER_TCP == *PREFER_UDP {
-        panic!("PREFER_TCP and PREFER_UDP cannot both be true or both be false");
+        error!("PREFER_TCP and PREFER_UDP cannot both be true or both be false");
+        std::process::exit(1);
     }
 
     if !*ENABLE_TCP && *PREFER_TCP {
-        panic!("PREFER_TCP cannot be true if ENABLE_TCP is false");
+        error!("PREFER_TCP cannot be true if ENABLE_TCP is false");
+        std::process::exit(1);
     }
 
     if !*ENABLE_UDP && *PREFER_UDP {
-        panic!("PREFER_UDP cannot be true if ENABLE_UDP is false");
+        error!("PREFER_UDP cannot be true if ENABLE_UDP is false");
+        std::process::exit(1);
+    }
+
+    if !*SSL_ENABLE && *SSL_ONLY {
+        error!("SSL_ONLY cannot be true if SSL_ENABLE is false");
+        std::process::exit(1);
     }
 
     lazy_static::initialize(&BIND_ADDR);
