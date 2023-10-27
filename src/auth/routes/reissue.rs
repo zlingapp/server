@@ -1,8 +1,4 @@
-use actix_web::{
-    post,
-    web::Json,
-    HttpRequest,
-};
+use actix_web::{post, web::Json, HttpRequest};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

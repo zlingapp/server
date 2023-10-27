@@ -1,6 +1,9 @@
 use actix_web::{get, web::Data, HttpResponse};
 
-use crate::{voice::{client::VoiceClientEx, VoiceChannels, VoiceClients}, error::HResult};
+use crate::{
+    error::HResult,
+    voice::{client::VoiceClientEx, VoiceChannels, VoiceClients},
+};
 
 /// Leave voice chat
 ///

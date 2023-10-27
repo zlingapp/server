@@ -62,7 +62,7 @@ pub async fn join_guild(
         err!()?;
     }
     ecm.notify_guild_member_list_update(&req.guild_id).await;
-    
+
     // again, this is temporarily here so the browser redirects back to /
     Ok(Redirect::to("/").see_other())
 }

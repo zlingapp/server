@@ -141,11 +141,11 @@ impl<T> IntoHandlerErrorResult<T> for Option<T> {
 pub mod macros {
     /// Convenience macro to return a `HandlerError`` wrapped in an `Err()``.
     /// Use it whenever you want to return an error from a handler function.
-    /// 
+    ///
     /// Example:
     /// ```
     /// use crate::error::macros::err;
-    /// 
+    ///
     /// fn handler() -> HResult<()> {
     ///    // Returns HTTP 500 Internal Server Error
     ///    err!()?;
