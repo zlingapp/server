@@ -1,14 +1,15 @@
 use actix_web::{
     delete,
-    error::{ErrorForbidden, ErrorInternalServerError},
     web::{Data, Path},
-    Error, HttpResponse,
+    HttpResponse,
 };
 use serde::Deserialize;
 use utoipa::IntoParams;
 
 use crate::{
-    auth::access_token::AccessToken, db::DB,
+    auth::access_token::AccessToken,
+    db::DB,
+    error::{macros::err, HResult},
     realtime::pubsub::consumer_manager::EventConsumerManager,
 };
 
@@ -38,7 +39,7 @@ pub async fn delete_message(
     token: AccessToken,
     path: Path<DeleteMessagePath>,
     ecm: Data<EventConsumerManager>,
-) -> Result<HttpResponse, Error> {
+) -> HResult<HttpResponse> {
     if let Ok(message) = db
         .get_message(&path.guild_id, &path.channel_id, &path.message_id)
         .await
@@ -50,10 +51,9 @@ pub async fn delete_message(
 
         if !db
             .can_user_view_messages_in(&token.user_id, &path.guild_id, &path.channel_id)
-            .await
-            .unwrap()
+            .await?
         {
-            return Err(ErrorForbidden("access_denied"));
+            err!(403)?;
         }
 
         // author should always be able to delete their own messages
@@ -61,18 +61,16 @@ pub async fn delete_message(
             // otherwise, check if the user has permission to delete messages
             if !db
                 .can_user_manage_messages(&token.user_id, &path.guild_id, &path.channel_id)
-                .await
-                .unwrap()
+                .await?
             {
-                return Err(ErrorForbidden("access_denied"));
+                err!(403)?;
             }
         }
 
         // delete the message from the db
         sqlx::query!("DELETE FROM messages WHERE id = $1", message.id)
             .execute(&db.pool)
-            .await
-            .map_err(|_| ErrorInternalServerError("failed"))?;
+            .await?;
 
         // tell clients that the message got deleted
         ecm.notify_message_deleted(&path.channel_id, &message.id)
@@ -82,7 +80,7 @@ pub async fn delete_message(
         // that would leak information about whether or not a message exists even if
         // the user doesn't have permission to view it. It doesn't really matter what
         // this returns
-        return Err(ErrorForbidden("access_denied"));
+        err!(403)?;
     }
 
     Ok(HttpResponse::Ok().finish())

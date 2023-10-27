@@ -1,11 +1,12 @@
-use actix_web::error::{ErrorBadRequest, ErrorConflict, ErrorForbidden};
-use actix_web::{error::ErrorInternalServerError, post, web::Json};
+use actix_web::{post, web::Json};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::auth::routes::register::{generate_discrim, USERNAME_REGEX};
 use crate::auth::user::PublicUserInfo;
+use crate::error::macros::err;
+use crate::error::HResult;
 use crate::util::use_display;
 use crate::{
     auth::{access_token::AccessToken, token::Token},
@@ -42,19 +43,19 @@ pub async fn create_bot(
     db: DB,
     token: AccessToken,
     req: Json<CreateBotRequest>,
-) -> Result<Json<BotDetails>, actix_web::Error> {
+) -> HResult<Json<BotDetails>> {
     if token.is_bot() {
-        return Err(ErrorForbidden("bot_access_denied"));
+        err!(403, "Bot access disallowed")?;
     }
 
     // check if name is ascii and alphanumeric
     if !USERNAME_REGEX.is_match(&req.username) {
-        return Err(ErrorBadRequest("invalid_username"));
+        err!(400, "Invalid username")?;
     }
 
     // todo: better check here
-    if !req.avatar.starts_with("/api/media/") {
-        return Err(ErrorBadRequest("invalid_avatar"));
+    if !req.avatar.starts_with("/media/") {
+        err!(400, "Invalid avatar")?;
     }
 
     let bot_user_id = format!("bot:{}", nanoid!());
@@ -72,12 +73,11 @@ pub async fn create_bot(
         req.avatar,
     )
     .execute(&db.pool)
-    .await
-    .map_err(|_| ErrorInternalServerError(""))?
+    .await?
     .rows_affected();
 
     if rows_affected != 1 {
-        return Err(ErrorConflict("username_taken"));
+        err!(409, "That username is already taken.")?;
     }
 
     sqlx::query!(
@@ -86,8 +86,7 @@ pub async fn create_bot(
         token.user_id,
     )
     .execute(&db.pool)
-    .await
-    .map_err(|_| ErrorInternalServerError(""))?;
+    .await?;
 
     let refresh_token = db
         .create_refresh_token(&bot_user_id, "zling-bot", true)

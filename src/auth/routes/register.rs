@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
 use actix_web::{
-    error::{ErrorBadRequest, ErrorConflict, ErrorInternalServerError},
     post,
     web::Json,
-    Error, HttpResponse,
+    HttpResponse,
 };
 use lazy_static::lazy_static;
 use log::warn;
@@ -13,7 +12,7 @@ use rand::Rng;
 use serde::Deserialize;
 use utoipa::ToSchema;
 
-use crate::{auth::user::User, db::DB};
+use crate::{auth::user::User, db::DB, error::{HResult, macros::err}};
 
 lazy_static! {
     pub static ref EMAIL_REGEX: regex::Regex = regex::Regex::new(r"(?i)^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$").unwrap();
@@ -43,13 +42,13 @@ pub struct RegisterRequest {
     tag = "identity"
 )]
 #[post("/auth/register")]
-pub async fn register(db: DB, req: Json<RegisterRequest>) -> Result<HttpResponse, Error> {
+pub async fn register(db: DB, req: Json<RegisterRequest>) -> HResult<HttpResponse> {
     if !USERNAME_REGEX.is_match(&req.username) {
-        return Err(ErrorBadRequest("invalid_username"));
+        err!(400, "That username contains illegal characters.")?;
     }
 
     if !EMAIL_REGEX.is_match(&req.email) {
-        return Err(ErrorBadRequest("invalid_email"));
+        err!(400, "Invalid email address for registration.")?;
     }
 
     let user = Arc::new(User {
@@ -64,13 +63,13 @@ pub async fn register(db: DB, req: Json<RegisterRequest>) -> Result<HttpResponse
         Ok(did_create) => {
             if !did_create {
                 // user already exists
-                return Err(ErrorConflict("already_exists"));
+                err!(409, "That username is already taken.")?;
             }
             return Ok(HttpResponse::Ok().body("success"));
         }
         Err(e) => {
             warn!("Failed to create user: {}", e);
-            return Err(ErrorInternalServerError("failed"));
+            err!()
         }
     }
 }

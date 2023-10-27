@@ -7,17 +7,17 @@ use std::{
 
 use actix_rt::task::JoinHandle;
 use actix_web::{
-    error::{ErrorBadRequest, ErrorUnauthorized},
     web::{Data, Query},
     FromRequest,
 };
 use futures::Future;
-use log::{info, warn};
+use log::info;
 use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcTransport};
 use nanoid::nanoid;
 
 use crate::{
     auth::{access_token::AccessToken, user::User},
+    error::{macros::err, HResult, HandlerError, IntoHandlerErrorResult},
     voice::{channel::VoiceChannel, MutexMap, VoiceClients},
 };
 use crate::{realtime::socket::Socket, util::constant_time_compare};
@@ -88,8 +88,8 @@ impl Deref for VoiceClientEx {
 }
 
 impl FromRequest for VoiceClientEx {
-    type Error = actix_web::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+    type Error = HandlerError;
+    type Future = Pin<Box<dyn Future<Output = HResult<Self>>>>;
 
     fn from_request(
         req: &actix_web::HttpRequest,
@@ -125,7 +125,7 @@ impl FromRequest for VoiceClientEx {
                     }
                     Err(_) => {
                         // trying to connect to ws but no credentials in query
-                        return Err(ErrorUnauthorized("voice_authentication_required"));
+                        return err!(401);
                     }
                 }
             } else {
@@ -145,11 +145,7 @@ impl FromRequest for VoiceClientEx {
             }
 
             if rtc_token == None || rtc_identity == None {
-                warn!(
-                    "no token and/or identity provided, denying access to {}",
-                    req.path()
-                );
-                return Err(ErrorUnauthorized("voice_authentication_required"));
+                return err!(401);
             }
 
             // SAFETY: this is fine because of the check above
@@ -159,39 +155,24 @@ impl FromRequest for VoiceClientEx {
             // get the client with that identity
             let client = req
                 .app_data::<Data<VoiceClients>>()
-                .unwrap()
+                .or_err(500)?
                 .lock()
-                .unwrap()
+                .or_err(500)?
                 .get(&rtc_identity)
                 .cloned();
 
             if client.is_none() {
-                warn!(
-                    "unknown identity {:?}, denying access to {}",
-                    rtc_identity,
-                    req.path()
-                );
-                return Err(ErrorUnauthorized("voice_authentication_required"));
+                return err!(403)?;
             }
 
             let client = client.unwrap();
 
             if !constant_time_compare(&client.token, &rtc_token) {
-                warn!(
-                    "token mismatch for {:?}, denying access to {}",
-                    client.identity,
-                    req.path()
-                );
-                return Err(ErrorUnauthorized("voice_authentication_required"));
+                return err!(403)?;
             }
 
             if !trying_to_connect_to_ws && client.socket.read().unwrap().is_none() {
-                warn!(
-                    "no socket session for {:?}, denying access to {}",
-                    client.identity,
-                    req.path()
-                );
-                return Err(ErrorBadRequest("voice_event_socket_not_connected"));
+                return err!(400, "You need to connect to the voice event socket first.")?;
             }
 
             return Ok(VoiceClientEx(client));

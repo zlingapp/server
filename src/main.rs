@@ -30,6 +30,7 @@ mod realtime;
 mod security;
 mod settings;
 mod util;
+mod error;
 mod voice;
 
 // shortcut to make a Mutexed String to T hashmap

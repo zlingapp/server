@@ -1,14 +1,15 @@
-use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError},
-    post,
-    web::Json,
-};
-use log::warn;
+use actix_web::{post, web::Json};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{auth::access_token::AccessToken, channels::channel::ChannelType, db::DB, security};
+use crate::{
+    auth::access_token::AccessToken,
+    channels::channel::ChannelType,
+    db::DB,
+    error::{macros::err, HResult},
+    security,
+};
 
 #[derive(Deserialize, ToSchema)]
 pub struct CreateGuildRequest {
@@ -35,8 +36,8 @@ pub struct CreateGuildResponse {
 /// The user will be automatically added to the guild as the owner.
 #[utoipa::path(
     responses(
-        (status = BAD_REQUEST, description = "Invalid icon", example = "invalid_icon"),
-        (status = BAD_REQUEST, description = "Invalid guild name", example = "invalid_icon"),
+        (status = BAD_REQUEST, description = "Invalid icon", body = HandlerError),
+        (status = BAD_REQUEST, description = "Invalid guild name", body = HandlerError),
         (status = OK, description = "Guild created successfully", body = CreateGuildResponse)
     ),
     tag = "guilds",
@@ -47,22 +48,21 @@ pub async fn create_guild(
     db: DB,
     token: AccessToken,
     req: Json<CreateGuildRequest>,
-) -> Result<Json<CreateGuildResponse>, actix_web::Error> {
+) -> HResult<Json<CreateGuildResponse>> {
     let guild_id = nanoid!();
 
     if let Some(ref icon) = req.icon {
         if !security::validate_resource_origin(icon) {
-            return Err(ErrorBadRequest("invalid_icon"));
+            err!(
+                400,
+                "Icon supplied must be a URL to an image hosted on this server."
+            )?;
         }
     }
 
     // todo: validate guild name
 
-    let mut tx = db
-        .pool
-        .begin()
-        .await
-        .map_err(|_| ErrorInternalServerError("failed"))?;
+    let mut tx = db.pool.begin().await?;
 
     let rows_affected = query_affected(
         sqlx::query!(
@@ -79,14 +79,10 @@ pub async fn create_guild(
         ),
         &mut tx,
     )
-    .await
-    .map_err(|e| {
-        warn!("failed to create guild: {}", e);
-        ErrorInternalServerError("failed")
-    })?;
+    .await?;
 
     if rows_affected == 0 {
-        return Err(ErrorInternalServerError("failed"));
+        err!()?;
     }
 
     query_affected(
@@ -97,14 +93,7 @@ pub async fn create_guild(
         ),
         &mut tx,
     )
-    .await
-    .map_err(|e| {
-        warn!(
-            "user {} failed to join guild as owner of {}: {}",
-            token.user_id, guild_id, e
-        );
-        ErrorInternalServerError("failed")
-    })?;
+    .await?;
 
     query_affected(
         sqlx::query!(
@@ -116,14 +105,7 @@ pub async fn create_guild(
         ),
         &mut tx,
     )
-    .await
-    .map_err(|e| {
-        warn!(
-            "failed to create default text channel when creating guild {}: {}",
-            guild_id, e
-        );
-        ErrorInternalServerError("failed")
-    })?;
+    .await?;
 
     query_affected(
         sqlx::query!(
@@ -135,18 +117,9 @@ pub async fn create_guild(
         ),
         &mut tx,
     )
-    .await
-    .map_err(|e| {
-        warn!(
-            "failed to create default voice channel when creating guild {}: {}",
-            guild_id, e
-        );
-        ErrorInternalServerError("failed")
-    })?;
+    .await?;
 
-    tx.commit()
-        .await
-        .map_err(|_| ErrorInternalServerError("failed"))?;
+    tx.commit().await?;
 
     Ok(Json(CreateGuildResponse { id: guild_id }))
 }
