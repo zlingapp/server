@@ -16,4 +16,4 @@ fi
 
 echo "Building image ${IMAGE_NAME}"
 echo "*********************************"
-docker build . -t $IMAGE_NAME --network host
+docker build . -t $IMAGE_NAME --network=host
