@@ -30,9 +30,7 @@ pub async fn add_friend(db: DB, token: AccessToken, path: UserIdPath) -> HResult
     let incoming = db.list_incoming_friend_requests(&token.user_id).await?;
     if incoming
         .iter()
-        .map(|i| i.user.id.clone())
-        .collect::<String>()
-        .contains(&path.user_id)
+        .any(|i| i.user.id == path.user_id)
     {
         // We have an incoming friend request, add friends now
         db.add_friends(&path.user_id, &token.user_id).await?;
@@ -41,9 +39,7 @@ pub async fn add_friend(db: DB, token: AccessToken, path: UserIdPath) -> HResult
     let outgoing = db.list_outgoing_friend_requests(&token.user_id).await?;
     if outgoing
         .iter()
-        .map(|i| i.user.id.clone())
-        .collect::<String>()
-        .contains(&path.user_id)
+        .any(|i| i.user.id == path.user_id)
     {
         err!(
             400,

@@ -36,7 +36,7 @@ pub struct User {
 
 // helper struct for representing user info to other users
 // the fields here should not be sensitive info, eg. email
-#[derive(Serialize, Deserialize, ToSchema, Clone)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct PublicUserInfo {
     #[schema(example = "xoKM4W7NDqHjK_V0g9s3y")]
     pub id: String,

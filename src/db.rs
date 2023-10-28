@@ -238,10 +238,10 @@ impl Database {
         .fetch_all(&self.pool)
         .await
         .map(|r| {
-            r.iter()
+            r.into_iter()
                 .map(|i| FriendRequest {
                     direction: FriendRequestType::Incoming,
-                    user: i.clone(),
+                    user: i,
                 })
                 .collect::<Vec<FriendRequest>>()
         })
@@ -260,10 +260,10 @@ impl Database {
         .fetch_all(&self.pool)
         .await
         .map(|r| {
-            r.iter()
+            r.into_iter()
                 .map(|i| FriendRequest {
                     direction: FriendRequestType::Outgoing,
-                    user: i.clone(),
+                    user: i,
                 })
                 .collect::<Vec<FriendRequest>>()
         })
