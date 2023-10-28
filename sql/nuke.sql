@@ -8,4 +8,5 @@ DROP TABLE roles;
 DROP TABLE members;
 DROP TABLE tokens;
 DROP TABLE bots;
+DROP TABLE friend_requests;
 COMMIT;

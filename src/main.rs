@@ -23,6 +23,7 @@ mod channels;
 mod crypto;
 mod db;
 mod error;
+mod friends;
 mod guilds;
 mod media;
 mod messaging;
@@ -119,6 +120,8 @@ async fn main() -> std::io::Result<()> {
             .configure(settings::routes::configure_app)
             // bots
             .configure(bot::routes::configure_app)
+            // friends
+            .configure(friends::routes::configure_app)
             .default_service(web::route().to(api_endpoint_not_found))
             // OpenAPI docs
             .service(
