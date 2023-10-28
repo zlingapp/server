@@ -1,11 +1,15 @@
-use actix_web::{get, web::Json};
+use actix_web::{
+    error::{ErrorForbidden, ErrorInternalServerError},
+    get,
+    web::Json,
+};
 use chrono::Utc;
+use log::error;
 
 use crate::{
     auth::{access_token::AccessToken, token::Token, user::PublicUserInfo},
     bot::routes::create_bot::BotDetails,
     db::DB,
-    error::{macros::err, HResult},
 };
 
 /// List Bots
@@ -19,9 +23,12 @@ use crate::{
     security(("token" = []))
 )]
 #[get("/bots")]
-pub async fn list_bots(db: DB, token: AccessToken) -> HResult<Json<Vec<BotDetails>>> {
+pub async fn list_bots(
+    db: DB,
+    token: AccessToken,
+) -> Result<Json<Vec<BotDetails>>, actix_web::Error> {
     if token.is_bot() {
-        err!(403, "Bot access disallowed")?;
+        return Err(ErrorForbidden("bot_access_denied"));
     }
 
     let rows = sqlx::query!(
@@ -29,7 +36,10 @@ pub async fn list_bots(db: DB, token: AccessToken) -> HResult<Json<Vec<BotDetail
         SELECT users.id, users.name, users.avatar, tokens.nonce, tokens.expires_at
         FROM bots, users, tokens WHERE bots.owner_id = $1 AND users.id = bots.id AND tokens.user_id = bots.id;"#,
         token.user_id
-    ).fetch_all(&db.pool).await?;
+    ).fetch_all(&db.pool).await.map_err(|e| {
+        error!("Failed to fetch bots: {}", e);
+        ErrorInternalServerError("")
+    })?;
 
     let details = rows
         .iter()

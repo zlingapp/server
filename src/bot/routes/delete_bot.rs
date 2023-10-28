@@ -1,12 +1,12 @@
-use actix_web::{delete, web::Path};
+use actix_web::{
+    delete,
+    error::{ErrorForbidden, ErrorInternalServerError, ErrorNotFound},
+    web::Path,
+};
 use serde::Deserialize;
 use utoipa::IntoParams;
 
-use crate::{
-    auth::access_token::AccessToken,
-    db::DB,
-    error::{macros::err, HResult},
-};
+use crate::{auth::access_token::AccessToken, db::DB};
 
 #[derive(Deserialize, IntoParams)]
 pub struct BotIdParams {
@@ -29,9 +29,9 @@ pub async fn delete_bot(
     db: DB,
     token: AccessToken,
     req: Path<BotIdParams>,
-) -> HResult<&'static str> {
+) -> Result<&'static str, actix_web::Error> {
     if token.is_bot() {
-        err!(403, "Bot access disallowed")?;
+        return Err(ErrorForbidden("bot_access_denied"));
     }
 
     // check if bot exists and is owned by user
@@ -42,18 +42,23 @@ pub async fn delete_bot(
         req.bot_id
     )
     .fetch_optional(&db.pool)
-    .await?;
+    .await
+    .map_err(|_| ErrorInternalServerError(""))?;
 
     if let Some(bot) = bot {
         if bot.owner_id != token.user_id {
-            err!(403, "You are not the owner of this bot.")?;
+            return Err(ErrorForbidden("not_bot_owner"));
         }
     } else {
-        err!(404, "A bot with that ID does not exist.")?;
+        return Err(ErrorNotFound("bot_not_found"));
     }
 
     // start transaction
-    let mut tx = db.pool.begin().await?;
+    let mut tx = db
+        .pool
+        .begin()
+        .await
+        .map_err(|_| ErrorInternalServerError(""))?;
 
     sqlx::query!(
         r#"
@@ -62,7 +67,8 @@ pub async fn delete_bot(
         req.bot_id
     )
     .execute(&mut tx)
-    .await?;
+    .await
+    .map_err(|_| ErrorInternalServerError(""))?;
 
     sqlx::query!(
         r#"
@@ -71,7 +77,8 @@ pub async fn delete_bot(
         req.bot_id
     )
     .execute(&mut tx)
-    .await?;
+    .await
+    .map_err(|_| ErrorInternalServerError(""))?;
 
     sqlx::query!(
         r#"
@@ -80,7 +87,8 @@ pub async fn delete_bot(
         req.bot_id
     )
     .execute(&mut tx)
-    .await?;
+    .await
+    .map_err(|_| ErrorInternalServerError(""))?;
 
     sqlx::query!(
         r#"
@@ -89,9 +97,12 @@ pub async fn delete_bot(
         req.bot_id
     )
     .execute(&mut tx)
-    .await?;
+    .await
+    .map_err(|_| ErrorInternalServerError(""))?;
 
-    tx.commit().await?;
+    tx.commit()
+        .await
+        .map_err(|_| ErrorInternalServerError(""))?;
 
     Ok("success")
 }

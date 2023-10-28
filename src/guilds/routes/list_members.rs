@@ -1,9 +1,13 @@
-use actix_web::{get, web::Json};
+use actix_web::{
+    error::{ErrorForbidden, ErrorInternalServerError},
+    get,
+    web::Json,
+};
+use log::error;
 
 use crate::{
     auth::{access_token::AccessToken, user::PublicUserInfo},
     db::DB,
-    error::{macros::err, HResult},
     guilds::routes::{GuildIdParams, GuildPath},
 };
 
@@ -24,11 +28,14 @@ pub async fn list_members(
     db: DB,
     token: AccessToken,
     path: GuildPath,
-) -> HResult<Json<Vec<PublicUserInfo>>> {
-    let is_in_guild = db.is_user_in_guild(&token.user_id, &path.guild_id).await?;
+) -> Result<Json<Vec<PublicUserInfo>>, actix_web::Error> {
+    let is_in_guild = db
+        .is_user_in_guild(&token.user_id, &path.guild_id)
+        .await
+        .map_err(|_| ErrorInternalServerError(""))?;
 
     if !is_in_guild {
-        err!(403)?;
+        return Err(ErrorForbidden("access_denied"));
     }
 
     let members = sqlx::query_as!(
@@ -44,7 +51,11 @@ pub async fn list_members(
         &path.guild_id
     )
     .fetch_all(&db.pool)
-    .await?;
+    .await
+    .map_err(|e| {
+        error!("Failed to fetch members: {}", e);
+        ErrorInternalServerError("")
+    })?;
 
     Ok(Json(members))
 }

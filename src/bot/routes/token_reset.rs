@@ -1,18 +1,16 @@
 use actix_web::{
+    error::{ErrorForbidden, ErrorInternalServerError, ErrorNotFound},
     post,
     web::{Json, Path},
 };
 use serde::Serialize;
 use utoipa::ToSchema;
 
+use crate::util::use_display;
 use crate::{
     auth::{access_token::AccessToken, token::Token},
     bot::routes::delete_bot::BotIdParams,
     db::DB,
-};
-use crate::{
-    error::{macros::err, HResult},
-    util::use_display,
 };
 
 #[derive(Serialize, ToSchema)]
@@ -38,9 +36,9 @@ pub async fn token_reset(
     db: DB,
     token: AccessToken,
     req: Path<BotIdParams>,
-) -> HResult<Json<TokenResetResponse>> {
+) -> Result<Json<TokenResetResponse>, actix_web::Error> {
     if token.is_bot() {
-        err!(403, "Bot access disallowed")?;
+        return Err(ErrorForbidden("bot_access_denied"));
     }
 
     // check if bot exists and is owned by user
@@ -51,14 +49,15 @@ pub async fn token_reset(
         req.bot_id
     )
     .fetch_optional(&db.pool)
-    .await?;
+    .await
+    .map_err(|_| ErrorInternalServerError(""))?;
 
     if let Some(bot) = bot {
         if bot.owner_id != token.user_id {
-            err!(403, "You are not the owner of this bot.")?;
+            return Err(ErrorForbidden("not_bot_owner"));
         }
     } else {
-        err!(404, "A bot with that ID does not exist.")?;
+        return Err(ErrorNotFound("bot_not_found"));
     }
 
     // delete old token
@@ -69,7 +68,8 @@ pub async fn token_reset(
         req.bot_id
     )
     .execute(&db.pool)
-    .await?;
+    .await
+    .map_err(|_| ErrorInternalServerError(""))?;
 
     // create new token
     let refresh_token = db

@@ -1,5 +1,5 @@
 use actix_web::post;
-use actix_web::{web::Json, HttpRequest, HttpResponse};
+use actix_web::{error::ErrorForbidden, web::Json, Error, HttpRequest, HttpResponse};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -7,8 +7,6 @@ use crate::auth::access_token::AccessToken;
 use crate::auth::token::Token;
 use crate::auth::user::User;
 use crate::db::DB;
-use crate::error::macros::err;
-use crate::error::HResult;
 use crate::util::use_display;
 
 #[derive(Deserialize, ToSchema)]
@@ -43,7 +41,11 @@ pub struct LoginResponese {
     tag = "identity"
 )]
 #[post("/auth/login")]
-pub async fn login(db: DB, creds: Json<LoginRequest>, req: HttpRequest) -> HResult<HttpResponse> {
+pub async fn login(
+    db: DB,
+    creds: Json<LoginRequest>,
+    req: HttpRequest,
+) -> Result<HttpResponse, Error> {
     let user_agent = match req.headers().get("User-Agent") {
         Some(user_agent) => match user_agent.to_str() {
             Ok(user_agent) => user_agent,
@@ -58,7 +60,7 @@ pub async fn login(db: DB, creds: Json<LoginRequest>, req: HttpRequest) -> HResu
 
     use crate::auth::token_issuing::IssueRefreshTokenResult::*;
     match auth_result {
-        Failure => err!(403)?,
+        Failure => Err(ErrorForbidden("access_denied")),
         Success {
             user,
             access_token,

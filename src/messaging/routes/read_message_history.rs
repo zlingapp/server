@@ -1,16 +1,17 @@
 use actix_web::{
+    error::{ErrorBadRequest, ErrorForbidden, ErrorInternalServerError},
     get,
     web::{Path, Query},
-    HttpResponse,
+    Error, HttpResponse,
 };
 use chrono::{DateTime, NaiveDateTime, Utc};
+use log::warn;
 use serde::Deserialize;
 use utoipa::IntoParams;
 
 use crate::{
     auth::{access_token::AccessToken, user::PublicUserInfo},
     db::DB,
-    error::{macros::err, HResult, HandlerError},
     messaging::message::Message,
 };
 
@@ -53,26 +54,27 @@ async fn read_message_history(
     token: AccessToken,
     path: Path<ReadHistoryPath>,
     req: Query<MessageHistoryQuery>,
-) -> HResult<HttpResponse> {
+) -> Result<HttpResponse, Error> {
     let can_read = db
         .can_user_read_message_history_from(&token.user_id, &path.guild_id, &path.channel_id)
-        .await?;
+        .await
+        .unwrap();
 
     if !can_read {
-        err!(403)?;
+        return Err(ErrorForbidden("access_denied"));
     }
 
     let limit = req.limit.unwrap_or(MAX_MESSAGE_LIMIT);
 
     if limit < 1 {
-        err!(400, "Message limit cannot be less than 1.")?;
+        return Err(ErrorBadRequest("invalid_limit"));
     }
 
     if limit > MAX_MESSAGE_LIMIT {
-        Err(HandlerError::with_code(
-            400,
-            format!("Message limit cannot be more than {}.", MAX_MESSAGE_LIMIT),
-        ))?
+        return Err(ErrorBadRequest(format!(
+            "max_limit_exceeds_{}",
+            MAX_MESSAGE_LIMIT
+        )));
     }
 
     let messages = sqlx::query!(
@@ -106,7 +108,11 @@ async fn read_message_history(
             .unwrap_or(NaiveDateTime::from_timestamp_opt(0, 0).unwrap())
     )
     .fetch_all(&db.pool)
-    .await?;
+    .await
+    .map_err(|e| {
+        warn!("failed to fetch message history: {}", e);
+        ErrorInternalServerError("fetch_failed")
+    })?;
 
     let messages: Vec<Message> = messages
         .iter()

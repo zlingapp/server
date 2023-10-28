@@ -2,17 +2,14 @@ use std::pin::Pin;
 
 use std::ops::Deref;
 
+use actix_web::error::ErrorInternalServerError;
 use actix_web::FromRequest;
 
 use futures::Future;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{
-    auth::access_token::AccessToken,
-    db::DB,
-    error::{HResult, HandlerError, IntoHandlerErrorResult},
-};
+use crate::{auth::access_token::AccessToken, db::DB};
 
 /// User Account Information
 // the email field shouldn't be known by users other than this user for privacy reasons
@@ -73,8 +70,8 @@ impl Into<User> for UserEx {
 }
 
 impl FromRequest for UserEx {
-    type Error = HandlerError;
-    type Future = Pin<Box<dyn Future<Output = HResult<Self>>>>;
+    type Error = actix_web::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
 
     fn from_request(
         req: &actix_web::HttpRequest,
@@ -82,15 +79,21 @@ impl FromRequest for UserEx {
     ) -> Self::Future {
         let req = req.clone();
         Box::pin(async move {
+            use actix_web::error::ErrorUnauthorized;
             let token = AccessToken::from_request(&req, &mut actix_web::dev::Payload::None).await?;
 
-            req.app_data::<DB>()
-                .or_err(500)?
+            let user = req
+                .app_data::<DB>()
+                .unwrap()
                 .get_user_by_id(&token.user_id)
                 .await
-                .or_err(500)?
-                .map(|u| UserEx(u))
-                .or_err(401)
+                .map_err(|e| {
+                    log::error!("failed to get user from db: {}", e);
+                    ErrorInternalServerError("")
+                })?
+                .map(|u| UserEx(u));
+
+            user.ok_or(ErrorUnauthorized("authentication_required"))
         })
     }
 }

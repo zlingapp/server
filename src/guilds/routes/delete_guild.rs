@@ -1,10 +1,12 @@
-use actix_web::{delete, HttpResponse};
-
-use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath};
-use crate::{
-    error::{macros::err, HResult},
-    guilds::routes::GuildIdParams,
+use actix_web::{
+    delete,
+    error::{ErrorForbidden, ErrorInternalServerError},
+    HttpResponse,
 };
+use log::warn;
+
+use crate::guilds::routes::GuildIdParams;
+use crate::{auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath};
 
 /// Delete a Guild
 ///
@@ -19,7 +21,11 @@ use crate::{
     security(("token" = []))
 )]
 #[delete("/guilds/{guild_id}")]
-pub async fn delete_guild(db: DB, token: AccessToken, req: GuildPath) -> HResult<HttpResponse> {
+pub async fn delete_guild(
+    db: DB,
+    token: AccessToken,
+    req: GuildPath,
+) -> Result<HttpResponse, actix_web::Error> {
     let rows_affected = sqlx::query!(
         r#"
             DELETE FROM guilds WHERE id = $1 AND owner = $2
@@ -28,11 +34,15 @@ pub async fn delete_guild(db: DB, token: AccessToken, req: GuildPath) -> HResult
         token.user_id
     )
     .execute(&db.pool)
-    .await?
+    .await
+    .map_err(|e| {
+        warn!("failed to delete guild: {}", e);
+        ErrorInternalServerError("failed")
+    })?
     .rows_affected();
 
     if rows_affected == 0 {
-        err!()?;
+        return Err(ErrorForbidden("access_denied"));
     }
 
     Ok(HttpResponse::Ok().body("success"))

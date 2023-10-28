@@ -1,20 +1,20 @@
 use actix_web::{
+    error::{ErrorBadRequest, ErrorForbidden, ErrorInternalServerError},
     post,
     web::{Data, Json},
+    Error,
 };
 use lazy_static::lazy_static;
+use log::warn;
 use nanoid::nanoid;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::guilds::routes::GuildIdParams;
 use crate::{
     auth::access_token::AccessToken, channels::channel::ChannelType, db::DB,
     guilds::routes::GuildPath, realtime::pubsub::consumer_manager::EventConsumerManager,
-};
-use crate::{
-    error::{macros::err, HResult},
-    guilds::routes::GuildIdParams,
 };
 
 #[derive(Deserialize, ToSchema)]
@@ -58,15 +58,24 @@ async fn create_channel(
     req: Json<CreateChannelRequest>,
     path: GuildPath,
     ecm: Data<EventConsumerManager>,
-) -> HResult<Json<CreateChannelResponse>> {
-    let user_in_guild = db.is_user_in_guild(&token.user_id, &path.guild_id).await?;
+) -> Result<Json<CreateChannelResponse>, Error> {
+    let user_in_guild = db
+        .is_user_in_guild(&token.user_id, &path.guild_id)
+        .await
+        .map_err(|e| {
+            warn!(
+                "failed to check if user {} is in guild {}: {}",
+                token.user_id, path.guild_id, e
+            );
+            ErrorInternalServerError("")
+        })?;
 
     if !user_in_guild {
-        err!(403)?
+        return Err(ErrorForbidden("access_denied"));
     }
 
     if req.name.trim().is_empty() || !CHANNEL_NAME_REGEX.is_match(&req.name) {
-        err!(400, "The channel name is invalid.")?
+        return Err(ErrorBadRequest("invalid_name"));
     }
 
     let channel_id = sqlx::query!(
@@ -77,7 +86,11 @@ async fn create_channel(
         req.r#type as ChannelType
     )
     .fetch_one(&db.pool)
-    .await?
+    .await
+    .map_err(|e| {
+        warn!("failed to create channel: {}", e);
+        ErrorInternalServerError("")
+    })?
     .id;
 
     ecm.notify_guild_channel_list_update(&path.guild_id).await;

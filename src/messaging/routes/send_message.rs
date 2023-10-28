@@ -1,4 +1,5 @@
 use actix_web::{
+    error::ErrorBadRequest,
     post,
     web::{Data, Json, Path},
 };
@@ -6,13 +7,17 @@ use chrono::{DateTime, Utc};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 
+use actix_web::{
+    error::{ErrorForbidden, ErrorInternalServerError},
+    Error,
+};
+use log::warn;
 use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     auth::user::{PublicUserInfo, UserEx},
     db::DB,
-    error::{macros::err, HResult},
     media::routes::upload::UploadedFileInfo,
     messaging::message::Message,
     realtime::pubsub::consumer_manager::EventConsumerManager,
@@ -59,7 +64,7 @@ async fn send_message(
     req: Json<SendMessageRequest>,
     path: Path<SendMessagePath>,
     ecm: Data<EventConsumerManager>,
-) -> HResult<Json<SendMessageResponse>> {
+) -> Result<Json<SendMessageResponse>, Error> {
     // get inner value
     let req = req.0;
 
@@ -69,13 +74,13 @@ async fn send_message(
 
     // ensure at least either content or attachments
     if is_content_empty && are_attachments_empty {
-        err!(400, "Message cannot be empty with no attachments.")?;
+        return Err(ErrorBadRequest("missing_content"));
     }
 
     // check content length
     if let Some(ref content) = req.content {
         if content.len() > 2000 {
-            err!(400, "Message content is too long.")?;
+            return Err(ErrorBadRequest("content_too_long"));
         }
     }
 
@@ -86,7 +91,7 @@ async fn send_message(
         .unwrap();
 
     if !can_send {
-        err!(403)?;
+        return Err(ErrorForbidden("access_denied"));
     }
 
     // serialize attachments list back to json
@@ -114,7 +119,11 @@ async fn send_message(
         attachments
     )
     .fetch_one(&db.pool)
-    .await?;
+    .await
+    .map_err(|e| {
+        warn!("failed to send message: {}", e);
+        ErrorInternalServerError("send_failed")
+    })?;
 
     let message = Message {
         id: record.id.clone(),

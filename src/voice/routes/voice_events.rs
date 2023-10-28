@@ -12,7 +12,6 @@ use serde_json::json;
 
 use crate::{
     auth::user::PublicUserInfo,
-    error::macros::err,
     realtime::socket::{SendFailureReason, Socket},
     voice::{
         channel::VoiceChannel,
@@ -94,7 +93,7 @@ pub async fn voice_events_ws(
     body: Payload,
 ) -> Result<HttpResponse, Error> {
     if client.socket.read().unwrap().is_some() {
-        err!(400, "Already connected to a voice event socket.")?;
+        return Err(actix_web::error::ErrorBadRequest("already_connected"));
     }
 
     // this is ugly but needed so the `move` callbacks below can access the client
