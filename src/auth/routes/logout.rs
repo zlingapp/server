@@ -1,6 +1,6 @@
-use actix_web::{get, HttpResponse};
+use actix_web::{get, Error, HttpResponse};
 
-use crate::{auth::access_token::AccessToken, error::HResult};
+use crate::auth::access_token::AccessToken;
 
 /// Log out
 ///
@@ -13,7 +13,7 @@ use crate::{auth::access_token::AccessToken, error::HResult};
     security(("token" = []))
 )]
 #[get("/auth/logout")]
-pub async fn logout(_token: AccessToken) -> HResult<HttpResponse> {
+pub async fn logout(_token: AccessToken) -> Result<HttpResponse, Error> {
     // todo: invalidate token
     Ok(HttpResponse::Ok().body("success"))
 }

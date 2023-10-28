@@ -1,9 +1,6 @@
-use actix_web::{get, web::Data, HttpResponse};
+use actix_web::{get, web::Data, Error, HttpResponse};
 
-use crate::{
-    error::HResult,
-    voice::{client::VoiceClientEx, VoiceChannels, VoiceClients},
-};
+use crate::voice::{client::VoiceClientEx, VoiceChannels, VoiceClients};
 
 /// Leave voice chat
 ///
@@ -22,7 +19,7 @@ pub async fn leave_vc(
     client: VoiceClientEx,
     clients: Data<VoiceClients>,
     channels: Data<VoiceChannels>,
-) -> HResult<HttpResponse> {
+) -> Result<HttpResponse, Error> {
     client
         .channel
         .disconnect_client(&client, &clients, &channels)

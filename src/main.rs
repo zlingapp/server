@@ -22,7 +22,6 @@ mod bot;
 mod channels;
 mod crypto;
 mod db;
-mod error;
 mod guilds;
 mod media;
 mod messaging;

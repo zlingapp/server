@@ -1,15 +1,11 @@
 use std::fs::File;
 
 use actix_files::NamedFile;
-use actix_web::{get, web::Path};
+use actix_web::{error::ErrorNotFound, get, web::Path, Error};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{
-    error::{macros::err, HResult, IntoHandlerErrorResult},
-    media::FILENAME_REGEX,
-    options,
-};
+use crate::{media::FILENAME_REGEX, options};
 
 #[derive(Deserialize, IntoParams)]
 pub struct FileIdentifierPath {
@@ -38,16 +34,16 @@ struct OApiFileResponse {}
     )
 )]
 #[get("/media/{id}/{filename}")]
-pub async fn getfile(req: Path<FileIdentifierPath>) -> HResult<NamedFile> {
+pub async fn getfile(req: Path<FileIdentifierPath>) -> Result<NamedFile, Error> {
     let filename = req.id.clone() + "_" + &req.filename;
 
     // path traversal prevention
     if !FILENAME_REGEX.is_match(&filename) {
-        return err!(404);
+        return Err(ErrorNotFound("not_found"));
     }
 
     let path = (*options::MEDIA_PATH).to_string() + "/" + &filename;
 
-    let file = File::open(path).or_err(404)?;
-    NamedFile::from_file(file, &req.filename).or_err(404)
+    let file = File::open(path).map_err(|_| ErrorNotFound("not_found"))?;
+    NamedFile::from_file(file, &req.filename).map_err(|_| ErrorNotFound("not_found"))
 }
