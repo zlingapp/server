@@ -11,7 +11,7 @@ use utoipa::ToSchema;
 
 use crate::{
     auth::access_token::AccessToken,
-    error::{macros::err, HResult, HandlerError, IntoHandlerErrorResult},
+    error::{macros::err, HResult, IntoHandlerErrorResult},
     media::{util::clean_filename, FILENAME_REGEX},
     options,
 };
@@ -84,10 +84,10 @@ pub async fn upload(
         .or_err_msg(400, "Invalid content length")?;
 
     if payload_size > MAX_FILE_SIZE {
-        Err(HandlerError::with_code(
+        err!(
             413,
-            format!("File exceeds size limit of {} bytes", MAX_FILE_SIZE),
-        ))?;
+            format!("File exceeds size limit of {} bytes", MAX_FILE_SIZE)
+        )?;
     }
 
     while let Some(field) = payload.try_next().await.unwrap() {

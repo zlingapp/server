@@ -10,7 +10,7 @@ use utoipa::IntoParams;
 use crate::{
     auth::{access_token::AccessToken, user::PublicUserInfo},
     db::DB,
-    error::{macros::err, HResult, HandlerError},
+    error::{macros::err, HResult},
     messaging::message::Message,
 };
 
@@ -69,10 +69,10 @@ async fn read_message_history(
     }
 
     if limit > MAX_MESSAGE_LIMIT {
-        Err(HandlerError::with_code(
+        err!(
             400,
-            format!("Message limit cannot be more than {}.", MAX_MESSAGE_LIMIT),
-        ))?
+            format!("Message limit cannot be more than {}.", MAX_MESSAGE_LIMIT)
+        )?
     }
 
     let messages = sqlx::query!(

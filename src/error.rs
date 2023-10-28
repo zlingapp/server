@@ -58,6 +58,12 @@ impl From<u16> for HandlerError {
             _ => StatusCode::from_u16(code)
                 .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
                 .to_string(),
+            // Serialises according to StatusCode.to_string()
+            // 500 -> "500" Internal Server Error
+            // 409 -> "409 Conflict"
+            // 404 -> "404 Not Found"
+            // 403 -> "403 Forbidden"
+            // 401 -> "401 Unauthorized"
         };
 
         Self::with_code(code, message)
@@ -76,9 +82,9 @@ impl From<String> for HandlerError {
     }
 }
 
-impl From<(u16, &'static str)> for HandlerError {
-    fn from(tuple: (u16, &'static str)) -> Self {
-        Self::with_code(tuple.0, tuple.1.into())
+impl From<(u16, String)> for HandlerError {
+    fn from(tuple: (u16, String)) -> Self {
+        Self::with_code(tuple.0, tuple.1)
     }
 }
 
@@ -124,7 +130,7 @@ impl<T, E> IntoHandlerErrorResult<T> for Result<T, E> {
     }
 
     fn or_err_msg(self, code: u16, message: &'static str) -> Result<T, HandlerError> {
-        self.or(Err(HandlerError::from((code, message))))
+        self.or(Err(HandlerError::from((code, message.into()))))
     }
 }
 
@@ -134,7 +140,7 @@ impl<T> IntoHandlerErrorResult<T> for Option<T> {
     }
 
     fn or_err_msg(self, code: u16, message: &'static str) -> Result<T, HandlerError> {
-        self.ok_or(HandlerError::from((code, message)))
+        self.ok_or(HandlerError::from((code, message.into())))
     }
 }
 
