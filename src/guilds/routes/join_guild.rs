@@ -1,17 +1,18 @@
 #![allow(deprecated)]
 
 use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError},
     get,
     web::{Data, Redirect},
     Responder,
 };
-use log::warn;
 
-use crate::guilds::routes::GuildIdParams;
 use crate::{
     auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath,
     realtime::pubsub::consumer_manager::EventConsumerManager,
+};
+use crate::{
+    error::{macros::err, HResult},
+    guilds::routes::GuildIdParams,
 };
 
 // todo: phase this out for invite system. btw, this is GET so people can go in
@@ -41,7 +42,7 @@ pub async fn join_guild(
     token: AccessToken,
     req: GuildPath,
     ecm: Data<EventConsumerManager>,
-) -> Result<impl Responder, actix_web::Error> {
+) -> HResult<impl Responder> {
     let rows_affected = sqlx::query!(
         r#"
             INSERT INTO members (user_id, guild_id) 
@@ -54,20 +55,14 @@ pub async fn join_guild(
         req.guild_id
     )
     .execute(&db.pool)
-    .await
-    .map_err(|e| {
-        warn!(
-            "user {} failed to join guild {}: {}",
-            token.user_id, req.guild_id, e
-        );
-        ErrorInternalServerError("failed")
-    })?
+    .await?
     .rows_affected();
 
     if rows_affected == 0 {
-        return Err(ErrorBadRequest("join_invalid"));
+        err!()?;
     }
     ecm.notify_guild_member_list_update(&req.guild_id).await;
+
     // again, this is temporarily here so the browser redirects back to /
     Ok(Redirect::to("/").see_other())
 }

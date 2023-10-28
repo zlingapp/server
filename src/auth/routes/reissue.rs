@@ -1,15 +1,11 @@
-use actix_web::{
-    error::{Error, ErrorForbidden},
-    post,
-    web::Json,
-    HttpRequest,
-};
+use actix_web::{post, web::Json, HttpRequest};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
     auth::{access_token::AccessToken, token::Token},
     db::DB,
+    error::{macros::err, HResult},
     util::use_display,
 };
 
@@ -45,14 +41,8 @@ pub async fn reissue(
     db: DB,
     body: Json<ReissueRequest>,
     req: HttpRequest,
-) -> Result<Json<ReissueResponse>, Error> {
-    let refresh_token: Token = body.refresh_token.parse().map_err(|e| {
-        use crate::auth::token::TokenParseError::*;
-        match e {
-            InvalidFormat => ErrorForbidden("access_denied"),
-            Expired => ErrorForbidden("token_expired"),
-        }
-    })?;
+) -> HResult<Json<ReissueResponse>> {
+    let refresh_token: Token = body.refresh_token.parse()?;
 
     if refresh_token.is_bot() {
         // for bots, just issue a new access token without invalidating the old refresh token
@@ -81,6 +71,6 @@ pub async fn reissue(
             access_token,
             refresh_token,
         })),
-        Failure => Err(ErrorForbidden("access_denied")),
+        Failure => err!(403)?,
     }
 }

@@ -1,13 +1,12 @@
-use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError},
-    post,
-    web::Json,
-    Error, HttpResponse,
-};
+use actix_web::{post, web::Json, HttpResponse};
 use log::warn;
 use serde::Deserialize;
 
-use crate::{auth::access_token::AccessToken, db::DB};
+use crate::{
+    auth::access_token::AccessToken,
+    db::DB,
+    error::{macros::err, HResult},
+};
 
 #[derive(Deserialize)]
 pub struct SetAvatarRequest {
@@ -19,10 +18,10 @@ pub async fn set_avatar(
     token: AccessToken,
     req: Json<SetAvatarRequest>,
     db: DB,
-) -> Result<HttpResponse, Error> {
+) -> HResult<HttpResponse> {
     // todo: better check here
-    if !req.avatar.starts_with("/api/media/") {
-        return Err(ErrorBadRequest("invalid_avatar"));
+    if !req.avatar.starts_with("/media/") {
+        err!(400, "Invalid avatar URL.")?;
     }
 
     // alter avatar in db
@@ -36,15 +35,11 @@ pub async fn set_avatar(
         token.user_id
     )
     .execute(&db.pool)
-    .await
-    .map_err(|e| {
-        warn!("failed to set avatar: {}", e);
-        ErrorInternalServerError("")
-    })?;
+    .await?;
 
     if result.rows_affected() != 1 {
         warn!("avatar set nothing");
-        return Err(ErrorInternalServerError(""));
+        err!()?;
     }
 
     Ok(HttpResponse::Ok().finish())

@@ -7,6 +7,8 @@ use derive_more::{Display, Error};
 use futures::Future;
 use utoipa::ToSchema;
 
+use crate::error::IntoHandlerErrorResult;
+use crate::error::{HResult, HandlerError};
 use crate::{crypto, options::TOKEN_SIGNING_KEY};
 
 use super::token::{Token, TokenParseError};
@@ -112,8 +114,8 @@ impl Deref for AccessToken {
 }
 
 impl FromRequest for AccessToken {
-    type Error = actix_web::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+    type Error = HandlerError;
+    type Future = Pin<Box<dyn Future<Output = HResult<Self>>>>;
 
     fn from_request(
         req: &actix_web::HttpRequest,
@@ -121,25 +123,19 @@ impl FromRequest for AccessToken {
     ) -> Self::Future {
         let req = req.clone();
         Box::pin(async move {
-            use actix_web::error::ErrorUnauthorized;
-
             // get the authorization header
             let auth_header = req
                 .headers()
                 .get("Authorization")
                 .map(|v| v.to_str())
-                .ok_or(ErrorUnauthorized("authentication_required"))?
-                .map_err(|_| ErrorUnauthorized("authentication_required"))?;
+                .or_err(401)?
+                .or_err(401)?;
 
             // needs to be a Bearer token
-            let token = auth_header
-                .strip_prefix("Bearer ")
-                .ok_or(ErrorUnauthorized("authentication_required"))?;
+            let token = auth_header.strip_prefix("Bearer ").or_err(401)?;
 
             // parse & validate the token
-            let access_token: AccessToken = token
-                .parse()
-                .map_err(|_| ErrorUnauthorized("authentication_required"))?;
+            let access_token: AccessToken = token.parse().or_err(401)?;
 
             Ok(access_token)
         })

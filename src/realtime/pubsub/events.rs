@@ -22,15 +22,15 @@ Message:
 use std::sync::Arc;
 
 use actix_web::{
-    error::ErrorUnauthorized,
     get,
     web::{Data, Payload, Query},
-    Error, HttpRequest, HttpResponse,
+    HttpRequest, HttpResponse,
 };
 use serde::Deserialize;
 
 use crate::{
     auth::{access_token::AccessToken, token::Token},
+    error::IntoHandlerErrorResult,
     realtime::{
         pubsub::{consumer::EventConsumer, consumer_manager::EventConsumerManager},
         socket::Socket,
@@ -114,15 +114,10 @@ pub async fn events_ws(
     req: HttpRequest,
     query: Query<TokenInQuery>,
     body: Payload,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, actix_web::Error> {
     // get token from query
-    let token = match query.auth.parse::<Token>() {
-        Ok(token) => AccessToken::from_existing(token),
-        Err(_) => {
-            return Err(ErrorUnauthorized("authentication_required"));
-        }
-    }
-    .ok_or(ErrorUnauthorized("authentication_required"))?;
+    let token = query.auth.parse::<Token>().or_err(401)?;
+    let token = AccessToken::from_existing(token).or_err(401)?;
 
     // set up handlers
     let on_message_handler: Box<dyn Fn(String) + Send + Sync + 'static>;

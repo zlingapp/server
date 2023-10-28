@@ -173,7 +173,7 @@ pub fn ssl_bind_addr() -> (IpAddr, u16) {
 }
 
 /// Load the SSL certificate and key files into a rustls config object
-/// 
+///
 /// Taken from https://github.com/actix/examples/blob/master/https-tls/rustls/src/main.rs
 pub fn ssl_config() -> rustls::ServerConfig {
     // init server config builder with safe defaults
@@ -239,7 +239,7 @@ pub fn initialize_all() {
     }
 
     lazy_static::initialize(&BIND_ADDR);
-    
+
     lazy_static::initialize(&SSL_BIND_ADDR);
     lazy_static::initialize(&SSL_CERT_PATH);
     lazy_static::initialize(&SSL_KEY_PATH);

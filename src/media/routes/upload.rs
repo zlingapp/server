@@ -1,12 +1,7 @@
 use std::io::{self, ErrorKind};
 
 use actix_multipart::{Field, Multipart};
-use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError, ErrorPayloadTooLarge},
-    post,
-    web::Json,
-    Error, HttpRequest,
-};
+use actix_web::{post, web::Json, HttpRequest};
 use futures::TryStreamExt;
 use log::warn;
 use nanoid::nanoid;
@@ -16,6 +11,7 @@ use utoipa::ToSchema;
 
 use crate::{
     auth::access_token::AccessToken,
+    error::{macros::err, HResult, HandlerError, IntoHandlerErrorResult},
     media::{util::clean_filename, FILENAME_REGEX},
     options,
 };
@@ -77,18 +73,21 @@ pub async fn upload(
     _token: AccessToken,
     mut payload: Multipart,
     request: HttpRequest,
-) -> Result<Json<UploadedFileInfo>, Error> {
+) -> HResult<Json<UploadedFileInfo>> {
     let payload_size = request
         .headers()
         .get("content-length")
-        .ok_or(ErrorBadRequest("invalid_content_length"))?
+        .or_err_msg(400, "Invalid content length")?
         .to_str()
-        .map_err(|_| ErrorBadRequest("invalid_content_length"))?
+        .or_err_msg(400, "Invalid content length")?
         .parse::<usize>()
-        .map_err(|_| ErrorBadRequest("invalid_content_length"))?;
+        .or_err_msg(400, "Invalid content length")?;
 
     if payload_size > MAX_FILE_SIZE {
-        return Err(ErrorPayloadTooLarge("file_size_exceeds_limit"));
+        Err(HandlerError::with_code(
+            413,
+            format!("File exceeds size limit of {} bytes", MAX_FILE_SIZE),
+        ))?;
     }
 
     while let Some(field) = payload.try_next().await.unwrap() {
@@ -126,7 +125,7 @@ pub async fn upload(
             // final check for file name validity, just to be sure...
             if !FILENAME_REGEX.is_match(&filename) {
                 warn!("filename invalid after cleaning: `{}`", filename);
-                return Err(ErrorBadRequest("invalid_name"));
+                return err!(400, "Invalid file name.");
             }
 
             let path = (*options::MEDIA_PATH).to_string() + "/" + &filename;
@@ -134,7 +133,7 @@ pub async fn upload(
             let result = save_file(&path, field).await;
             if let Err(e) = result {
                 warn!("saving usermedia `{}` failed: {}", filename, e);
-                return Err(ErrorInternalServerError("could_not_save"));
+                return err!();
             }
         }
 
@@ -147,7 +146,7 @@ pub async fn upload(
         }));
     }
 
-    return Err(ErrorBadRequest("missing_file_field"));
+    err!(400, "The form submitted is missing the 'file' field.")?
 }
 
 async fn save_file(path: &str, mut field: Field) -> io::Result<()> {

@@ -1,9 +1,8 @@
-use actix_web::{error::ErrorInternalServerError, get, web::Json};
-use log::warn;
+use actix_web::{get, web::Json};
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::{auth::access_token::AccessToken, db::DB};
+use crate::{auth::access_token::AccessToken, db::DB, error::HResult};
 
 #[derive(Serialize, ToSchema)]
 pub struct GuildInfo {
@@ -29,10 +28,7 @@ pub struct GuildInfo {
     security(("token" = []))
 )]
 #[get("/guilds")]
-pub async fn list_joined_guilds(
-    db: DB,
-    token: AccessToken,
-) -> Result<Json<Vec<GuildInfo>>, actix_web::Error> {
+pub async fn list_joined_guilds(db: DB, token: AccessToken) -> HResult<Json<Vec<GuildInfo>>> {
     let guilds_list = sqlx::query_as!(
         GuildInfo,
         r#"
@@ -42,11 +38,7 @@ pub async fn list_joined_guilds(
         token.user_id
     )
     .fetch_all(&db.pool)
-    .await
-    .map_err(|e| {
-        warn!("failed to list guilds for user {}: {}", token.user_id, e);
-        ErrorInternalServerError("failed")
-    })?;
+    .await?;
 
     Ok(Json(guilds_list))
 }

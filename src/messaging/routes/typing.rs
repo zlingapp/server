@@ -1,6 +1,4 @@
 use actix_web::{
-    error::Error,
-    error::ErrorForbidden,
     post,
     web::{Data, Path},
     HttpResponse,
@@ -8,7 +6,12 @@ use actix_web::{
 use serde::Deserialize;
 use utoipa::IntoParams;
 
-use crate::{auth::user::UserEx, db::DB, realtime::pubsub::consumer_manager::EventConsumerManager};
+use crate::{
+    auth::user::UserEx,
+    db::DB,
+    error::{macros::err, HResult},
+    realtime::pubsub::consumer_manager::EventConsumerManager,
+};
 
 #[derive(Deserialize, IntoParams)]
 pub struct TypingPath {
@@ -35,13 +38,12 @@ pub async fn typing(
     path: Path<TypingPath>,
     user: UserEx,
     ecm: Data<EventConsumerManager>,
-) -> Result<HttpResponse, Error> {
+) -> HResult<HttpResponse> {
     if !db
         .can_user_send_message_in(&user.id, &path.guild_id, &path.channel_id)
-        .await
-        .unwrap()
+        .await?
     {
-        return Err(ErrorForbidden("access_denied"));
+        return err!(403);
     }
 
     ecm.send_typing(&path.channel_id, &user).await;
