@@ -48,5 +48,8 @@ echo
 echo "   To run an SQL file inside the database container:"
 echo "   $ docker exec -i zling-db psql -U zling-backend < your-file.sql"
 echo
+echo "  The proper way to initialise the database is using sqlx-cli:"
+echo "  $ sqlx migrate run"
+echo
 echo "   Happy hacking!"
 echo

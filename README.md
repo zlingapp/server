@@ -132,5 +132,8 @@ See [the options.rs file](src/options.rs).
 |-|-|-|
 |`MEDIA_PATH`|`String`|`/var/tmp/zling-media`|
 
+#### Database migrations
+Database migrations are handled simply with `sqlx-cli` and the `/migrations` directory. On the first `sqlx migrate run`, each `.up` file is run in succession according to their timestamp. On any subsequent run, only new migrations are run, allowing an existing database to be modified non-destructively. Additionally, any change can be reverted using `sqlx revert`, running the `.down` sql file. Any `sortableInt_name.up.sql` file can be used, but ideally create migrations using `sqlx migrate add`.
+
 #### Miscellaneous
 - Recommended: start the server with `RUST_LOG=info,sqlx::query=warn`.
