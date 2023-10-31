@@ -6,6 +6,9 @@ edition = "2021"
 authors = ["codian", "ori"]
 license = "GPL-3.0"
 
+[lib]
+doctest=false
+
 [dependencies]
 # async stuff
 futures = "0.3.28"
