@@ -30,9 +30,7 @@ pub async fn remove_friend_request(
     let incoming = db.list_incoming_friend_requests(&token.user_id).await?;
     if incoming
         .iter()
-        .map(|i| i.user.id.clone())
-        .collect::<String>()
-        .contains(&path.user_id)
+        .any(|i| i.user.id == &path.user_id)
     {
         // We want to deny the incoming request
         sqlx::query!(
@@ -49,9 +47,7 @@ pub async fn remove_friend_request(
     let outgoing = db.list_outgoing_friend_requests(&token.user_id).await?;
     if outgoing
         .iter()
-        .map(|i| i.user.id.clone())
-        .collect::<String>()
-        .contains(&path.user_id)
+        .any(|i| i.user.id == &path.user_id)
     {
         // We want to cancel the outgoing friend request
         sqlx::query!(

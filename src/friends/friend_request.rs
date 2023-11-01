@@ -3,7 +3,7 @@ use actix_web::web::Path;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Clone, Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum FriendRequestType {
     Incoming,
