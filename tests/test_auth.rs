@@ -1,4 +1,4 @@
-use actix_web::{http::header::ContentType, test, web::Data, App};
+use actix_web::{test, web::Data, App};
 use serde_json::json;
 use sqlx::{query, Pool, Postgres};
 use zling_server::{auth, db::Database};
@@ -20,7 +20,6 @@ async fn test_successful_registration(pool: Pool<Postgres>) {
             "password": "password123",
             "username": "Test User",
         }))
-        .insert_header(ContentType::json())
         .to_request();
 
     let resp = test::call_service(&app, req).await;
@@ -30,7 +29,7 @@ async fn test_successful_registration(pool: Pool<Postgres>) {
         .fetch_one(&pool)
         .await
         .unwrap();
-    
+
     assert_eq!(user.email, Some("test@example.com".into()));
     assert_eq!(user.name.split("#").collect::<Vec<&str>>()[0], "Test User");
 }
