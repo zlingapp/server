@@ -56,7 +56,10 @@ async fn test_login_whoami(pool: Pool<Postgres>) {
 
     let req = test::TestRequest::get()
         .uri("/auth/whoami")
-        .insert_header(("Authorization", "Bearer ".to_owned() + &resp.access_token.to_string()))
+        .insert_header((
+            "Authorization",
+            "Bearer ".to_owned() + &resp.access_token.to_string(),
+        ))
         .to_request();
     let resp: auth::user::User = test::call_and_read_body_json(&app, req).await;
     assert_eq!(resp.name, "James#1119");
