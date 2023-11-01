@@ -18,11 +18,11 @@ pub struct LoginRequest {
     password: String,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
-    user: User,
-    access_token: AccessToken,
+    pub user: User,
+    pub access_token: AccessToken,
     refresh_token: Token,
 }
 

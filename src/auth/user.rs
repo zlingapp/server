@@ -15,7 +15,7 @@ use crate::{
 /// User Account Information
 // the email field shouldn't be known by users other than this user for privacy reasons
 // only send this User struct to the user it references
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct User {
     // do not store sensitive information in here
     // this may be sent directly to the client
