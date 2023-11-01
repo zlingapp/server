@@ -31,7 +31,7 @@ async fn test_successful_registration(pool: Pool<Postgres>) {
         .unwrap();
 
     assert_eq!(user.email, Some("test@example.com".into()));
-    assert_eq!(user.name.split("#").collect::<Vec<&str>>()[0], "Test User");
+    assert_eq!(user.name.split("#").next(), Some("Test User"));
 }
 
 #[sqlx::test(fixtures("users"))]
