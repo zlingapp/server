@@ -9,7 +9,6 @@ use crate::auth::user::User;
 use crate::db::DB;
 use crate::error::macros::err;
 use crate::error::HResult;
-use crate::util::use_display;
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
@@ -23,9 +22,7 @@ pub struct LoginRequest {
 #[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
     user: User,
-    #[serde(serialize_with = "use_display")]
     access_token: AccessToken,
-    #[serde(serialize_with = "use_display")]
     refresh_token: Token,
 }
 

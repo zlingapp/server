@@ -5,20 +5,16 @@ use actix_web::{
 use serde::Serialize;
 use utoipa::ToSchema;
 
+use crate::error::{macros::err, HResult};
 use crate::{
     auth::{access_token::AccessToken, token::Token},
     bot::routes::delete_bot::BotIdParams,
     db::DB,
 };
-use crate::{
-    error::{macros::err, HResult},
-    util::use_display,
-};
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenResetResponse {
-    #[serde(serialize_with = "use_display")]
     refresh_token: Token,
 }
 

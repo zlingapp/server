@@ -6,21 +6,18 @@ use crate::{
     auth::{access_token::AccessToken, token::Token},
     db::DB,
     error::{macros::err, HResult},
-    util::use_display,
 };
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReissueRequest {
-    refresh_token: String,
+    refresh_token: Token,
 }
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReissueResponse {
-    #[serde(serialize_with = "use_display")]
     access_token: AccessToken,
-    #[serde(serialize_with = "use_display")]
     refresh_token: Token,
 }
 
@@ -42,7 +39,7 @@ pub async fn reissue(
     body: Json<ReissueRequest>,
     req: HttpRequest,
 ) -> HResult<Json<ReissueResponse>> {
-    let refresh_token: Token = body.refresh_token.parse()?;
+    let refresh_token = body.refresh_token.clone();
 
     if refresh_token.is_bot() {
         // for bots, just issue a new access token without invalidating the old refresh token

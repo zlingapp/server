@@ -9,3 +9,4 @@ pub mod messaging;
 pub mod options;
 pub mod realtime;
 pub mod util;
+pub mod friends;

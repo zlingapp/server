@@ -7,7 +7,6 @@ use crate::auth::routes::register::{generate_discrim, USERNAME_REGEX};
 use crate::auth::user::PublicUserInfo;
 use crate::error::macros::err;
 use crate::error::HResult;
-use crate::util::use_display;
 use crate::{
     auth::{access_token::AccessToken, token::Token},
     db::DB,
@@ -24,7 +23,6 @@ pub struct CreateBotRequest {
 #[serde(rename_all = "camelCase")]
 pub struct BotDetails {
     pub user: PublicUserInfo,
-    #[serde(serialize_with = "use_display")]
     pub refresh_token: Token,
 }
 

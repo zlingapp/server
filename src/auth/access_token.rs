@@ -5,6 +5,7 @@ use actix_web::FromRequest;
 use chrono::{DateTime, Utc};
 use derive_more::{Display, Error};
 use futures::Future;
+use serde::Deserializer;
 use utoipa::ToSchema;
 
 use crate::error::IntoHandlerErrorResult;
@@ -46,7 +47,7 @@ use super::token_issuing::ACCESS_TOKEN_VALIDITY;
 /// let parsed_token = Token::from_str(&token_str).unwrap();
 /// assert_eq!(token, parsed_token);
 /// ```
-#[derive(Debug, PartialEq, Eq, ToSchema, Display)]
+#[derive(Debug, PartialEq, Eq, ToSchema, Display, Clone)]
 pub struct AccessToken(Token);
 
 impl AccessToken {
@@ -139,5 +140,18 @@ impl FromRequest for AccessToken {
 
             Ok(access_token)
         })
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for AccessToken {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Self::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl serde::Serialize for AccessToken {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        crate::util::use_display(self, s)
     }
 }

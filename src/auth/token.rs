@@ -1,5 +1,6 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::{Display, Error};
+use serde::Deserializer;
 use serde_json::json;
 use std::{fmt::Display, str::FromStr};
 use utoipa::{
@@ -7,7 +8,7 @@ use utoipa::{
     ToSchema,
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 // see impl of ToSchema below
 pub struct Token {
     pub user_id: String,
@@ -104,5 +105,19 @@ impl FromStr for Token {
         }
 
         Ok(tok)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Token {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Self::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+// serialize with use_display
+impl serde::Serialize for Token {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        crate::util::use_display(self, s)
     }
 }
