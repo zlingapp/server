@@ -1,4 +1,7 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use actix_rt::time::sleep;
 use actix_web::{
@@ -7,13 +10,16 @@ use actix_web::{
 };
 
 use log::{info, warn};
-use mediasoup::{rtp_parameters::RtpCapabilitiesFinalized, worker_manager::WorkerManager};
+use mediasoup::rtp_parameters::RtpCapabilitiesFinalized;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     auth::user::UserEx,
-    voice::{channel::create_channel, client::VoiceClient, VoiceChannels, VoiceClients},
+    voice::{
+        channel::create_channel, client::VoiceClient, pool::VoiceWorkerPool, VoiceChannels,
+        VoiceClients,
+    },
 };
 
 #[derive(Deserialize, IntoParams)]
@@ -120,7 +126,7 @@ pub async fn join_vc(
     user: UserEx,
     clients: Data<VoiceClients>,
     channels: Data<VoiceChannels>,
-    wm: Data<WorkerManager>,
+    vwp: Data<Mutex<VoiceWorkerPool>>,
     query: Query<JoinVcQuery>,
 ) -> Json<JoinVcReply> {
     // get the channel
@@ -128,8 +134,10 @@ pub async fn join_vc(
     // channels lock is released here
 
     let channel = match channel {
+        // existing channel exists
         Some(existing) => existing.clone(),
-        None => create_channel(&query.channel_id, channels.clone(), wm.into_inner()).await,
+        // create a new channel
+        None => create_channel(&query.channel_id, channels.clone(), &vwp.into_inner()).await,
     };
 
     // create a new client

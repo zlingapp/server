@@ -6,6 +6,7 @@ use self::{channel::VoiceChannel, client::VoiceClient};
 
 pub mod channel;
 pub mod client;
+pub mod pool;
 pub mod routes;
 pub mod transport;
 

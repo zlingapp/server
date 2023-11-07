@@ -12,7 +12,6 @@ use mediasoup::{
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::options::webrtc_transport_options;
 use crate::voice::{client::VoiceClientEx, transport::TransportType};
 
 /*
@@ -119,8 +118,7 @@ pub async fn create_transport(
     // Create the transport.
     let transport = client
         .channel
-        .router
-        .create_webrtc_transport(webrtc_transport_options())
+        .create_webrtc_transport()
         .await
         .map_err(|e| {
             error!(
