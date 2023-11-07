@@ -28,10 +28,7 @@ pub async fn remove_friend_request(
     path: UserIdPath,
 ) -> HResult<Json<String>> {
     let incoming = db.list_incoming_friend_requests(&token.user_id).await?;
-    if incoming
-        .iter()
-        .any(|i| i.user.id == &path.user_id)
-    {
+    if incoming.iter().any(|i| i.user.id == path.user_id) {
         // We want to deny the incoming request
         sqlx::query!(
             r#"DELETE FROM friend_requests
@@ -45,10 +42,7 @@ pub async fn remove_friend_request(
         return Ok(Json("Incoming friend request successfully denied".into()));
     }
     let outgoing = db.list_outgoing_friend_requests(&token.user_id).await?;
-    if outgoing
-        .iter()
-        .any(|i| i.user.id == &path.user_id)
-    {
+    if outgoing.iter().any(|i| i.user.id == path.user_id) {
         // We want to cancel the outgoing friend request
         sqlx::query!(
             r#"DELETE FROM friend_requests

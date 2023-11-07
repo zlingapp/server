@@ -8,8 +8,7 @@ use crate::{
 };
 
 use super::{
-    consumer::EventConsumer,
-    consumer_map::ConsumerMap,
+    consumer_map::{ConsumerMap, EventConsumer},
     topic::{Topic, TopicType},
 };
 use std::sync::RwLock;
@@ -31,6 +30,9 @@ pub enum Event<'l> {
     DeleteMessage { id: &'l str },
     /// A user started typing in a channel.
     Typing { user: &'l PublicUserInfo },
+    /// Either an incoming friend request, or someone accepted an outgoing friend request.
+    /// The client should keep track of pending requests.
+    FriendRequestUpdate { user: &'l PublicUserInfo },
 }
 
 impl EventConsumerManager {
@@ -47,7 +49,7 @@ impl EventConsumerManager {
 
             for consumer in consumers {
                 futures.push(
-                    consumer.socket.send(
+                    consumer.send(
                         json!({
                             "topic": topic,
                             "event": event,
@@ -59,6 +61,9 @@ impl EventConsumerManager {
 
             join_all(futures).await;
         }
+    }
+    pub async fn broadcast_user(&self, user: String, event: Event<'_>) {
+        todo!()
     }
 }
 

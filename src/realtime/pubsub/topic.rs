@@ -37,6 +37,9 @@ pub enum TopicType {
     Guild,
     /// Messages or typing, etc... in a channel
     Channel,
+    /// Friend requests, etc... with respect to only one user
+    /// Probably redundant
+    User,
 }
 
 impl FromStr for TopicType {

@@ -1,11 +1,18 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
-use super::{consumer::EventConsumer, topic::Topic};
+use super::topic::Topic;
+use crate::realtime::socket::Socket;
+
+pub type EventConsumer = Arc<Socket>;
 
 pub struct ConsumerMap {
     pub topic_to_cons: HashMap<Topic, HashSet<EventConsumer>>,
     // socket id to event consumer and subscribed topics
     pub socket_id_to_cons_and_topics: HashMap<String, (EventConsumer, Vec<Topic>)>,
+    //
 }
 
 impl ConsumerMap {
@@ -22,7 +29,7 @@ impl ConsumerMap {
 
     pub fn add_consumer_with_topics(&mut self, consumer: EventConsumer, topics: Vec<Topic>) {
         self.socket_id_to_cons_and_topics
-            .insert(consumer.socket.id.clone(), (consumer, topics));
+            .insert(consumer.id.clone(), (consumer, topics));
     }
 
     pub fn remove_consumer(&mut self, socket_id: &str) {

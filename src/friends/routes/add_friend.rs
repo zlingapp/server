@@ -28,19 +28,13 @@ pub async fn add_friend(db: DB, token: AccessToken, path: UserIdPath) -> HResult
         err!(400, "You are already friends with that user")?;
     }
     let incoming = db.list_incoming_friend_requests(&token.user_id).await?;
-    if incoming
-        .iter()
-        .any(|i| i.user.id == path.user_id)
-    {
+    if incoming.iter().any(|i| i.user.id == path.user_id) {
         // We have an incoming friend request, add friends now
         db.add_friends(&path.user_id, &token.user_id).await?;
         return Ok(Json("Friend successfully added".into()));
     }
     let outgoing = db.list_outgoing_friend_requests(&token.user_id).await?;
-    if outgoing
-        .iter()
-        .any(|i| i.user.id == path.user_id)
-    {
+    if outgoing.iter().any(|i| i.user.id == path.user_id) {
         err!(
             400,
             "An outgoing friend request to this user already exists"

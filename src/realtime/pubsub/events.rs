@@ -31,10 +31,7 @@ use serde::Deserialize;
 use crate::{
     auth::{access_token::AccessToken, token::Token},
     error::IntoHandlerErrorResult,
-    realtime::{
-        pubsub::{consumer::EventConsumer, consumer_manager::EventConsumerManager},
-        socket::Socket,
-    },
+    realtime::{pubsub::consumer_manager::EventConsumerManager, socket::Socket},
 };
 
 use super::topic::Topic;
@@ -123,8 +120,6 @@ pub async fn events_ws(
     let on_message_handler: Box<dyn Fn(String) + Send + Sync + 'static>;
     let on_close_handler;
 
-    let token = Arc::new(token);
-
     // generate random socket id
     let socket_id = nanoid::nanoid!();
 
@@ -169,8 +164,7 @@ pub async fn events_ws(
         Some(on_close_handler),
     )?;
 
-    let ec = EventConsumer::new(token.user_id.clone(), socket);
-    ecm.add_consumer(ec);
+    ecm.add_consumer(socket);
 
     Ok(response)
 }
