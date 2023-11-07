@@ -1,10 +1,14 @@
-use actix_web::{delete, web::Json};
+use actix_web::{
+    delete,
+    web::{Data, Json},
+};
 
 use crate::{
     auth::access_token::AccessToken,
     db::DB,
     error::{macros::err, HResult},
     friends::friend_request::{UserIdParams, UserIdPath},
+    realtime::pubsub::consumer_manager::{Event, EventConsumerManager},
 };
 
 /// Remove a friend request
@@ -24,6 +28,7 @@ use crate::{
 #[delete("/friends/requests/{user_id}")]
 pub async fn remove_friend_request(
     db: DB,
+    ecm: Data<EventConsumerManager>,
     token: AccessToken,
     path: UserIdPath,
 ) -> HResult<Json<String>> {
@@ -39,6 +44,20 @@ pub async fn remove_friend_request(
         )
         .execute(&db.pool)
         .await?;
+
+        // Notify them that we hate their guts and denied their friend request
+        let me_user = db
+            .get_user_by_id(&token.user_id)
+            .await?
+            .expect("A user not in the db sent an authenticated request?? WTF!!!");
+        ecm.broadcast_user(
+            &path.user_id,
+            Event::FriendRequestRemove {
+                user: &me_user.into(),
+            },
+        )
+        .await;
+
         return Ok(Json("Incoming friend request successfully denied".into()));
     }
     let outgoing = db.list_outgoing_friend_requests(&token.user_id).await?;
@@ -53,6 +72,20 @@ pub async fn remove_friend_request(
         )
         .execute(&db.pool)
         .await?;
+
+        // Notify them that we have rejected their trade request
+        let me_user = db
+            .get_user_by_id(&token.user_id)
+            .await?
+            .expect("A user not in the db sent an authenticated request?? WTF!!!");
+        ecm.broadcast_user(
+            &path.user_id,
+            Event::FriendRequestRemove {
+                user: &me_user.into(),
+            },
+        )
+        .await;
+
         return Ok(Json("Outgoing friend request sucessfully cancelled".into()));
     }
     err!(400, "No incoming or outgoing friend request with that user")

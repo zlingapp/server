@@ -5,13 +5,14 @@ use serde_json::json;
 use crate::{
     auth::user::{PublicUserInfo, User},
     messaging::message::Message,
+    realtime::socket::Socket,
 };
 
 use super::{
-    consumer_map::{ConsumerMap, EventConsumer},
+    consumer_map::ConsumerMap,
     topic::{Topic, TopicType},
 };
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 pub struct EventConsumerManager {
     consumers: RwLock<ConsumerMap>,
@@ -30,9 +31,19 @@ pub enum Event<'l> {
     DeleteMessage { id: &'l str },
     /// A user started typing in a channel.
     Typing { user: &'l PublicUserInfo },
-    /// Either an incoming friend request, or someone accepted an outgoing friend request.
-    /// The client should keep track of pending requests.
+
+    /// Some sort of update to a friend request. Clients should keep track of these
+    /// Options
+    /// - Someone sent you a friend request
+    /// - Someone accepted your friend request
     FriendRequestUpdate { user: &'l PublicUserInfo },
+    /// A friend request has been deleted. Clients should keep track of theses
+    /// Options
+    /// - Someone denied your friend request
+    /// - Someone cancelled a friend request they sent to your
+    FriendRequestRemove { user: &'l PublicUserInfo },
+    /// Someone severed all ties with you
+    FriendRemove { user: &'l PublicUserInfo },
 }
 
 impl EventConsumerManager {
@@ -62,19 +73,35 @@ impl EventConsumerManager {
             join_all(futures).await;
         }
     }
-    pub async fn broadcast_user(&self, user: String, event: Event<'_>) {
-        todo!()
+    pub async fn broadcast_user(&self, user: &str, event: Event<'_>) {
+        if let Some(consumers) = self.consumers.read().unwrap().user_id_to_sockets.get(user) {
+            let mut futures = Vec::with_capacity(consumers.len());
+            for consumer in consumers {
+                futures.push(
+                    consumer.send(
+                        json!({"topic": Topic::new(TopicType::User,user.into()),"event":event})
+                            .to_string(),
+                    ),
+                )
+            }
+        }
     }
 }
 
 // re-export ConsumerMap methods
 impl EventConsumerManager {
-    pub fn add_consumer(&self, consumer: EventConsumer) {
-        self.consumers.write().unwrap().add_consumer(consumer);
+    pub fn add_consumer(&self, user_id: String, consumer: Arc<Socket>) {
+        self.consumers
+            .write()
+            .unwrap()
+            .add_consumer(user_id, consumer);
     }
 
-    pub fn remove_consumer(&self, socket_id: &str) {
-        self.consumers.write().unwrap().remove_consumer(socket_id);
+    pub fn remove_consumer(&self, user_id: &str, socket_id: &str) {
+        self.consumers
+            .write()
+            .unwrap()
+            .remove_consumer(user_id, socket_id);
     }
 
     pub fn subscribe(&self, socket_id: &str, topic: Topic) -> Result<(), ()> {

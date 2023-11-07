@@ -19,8 +19,6 @@ Message:
 
  */
 
-use std::sync::Arc;
-
 use actix_web::{
     get,
     web::{Data, Payload, Query},
@@ -115,6 +113,7 @@ pub async fn events_ws(
     // get token from query
     let token = query.auth.parse::<Token>().or_err(401)?;
     let token = AccessToken::from_existing(token).or_err(401)?;
+    let id = token.user_id.clone(); // Save for registering consumer
 
     // set up handlers
     let on_message_handler: Box<dyn Fn(String) + Send + Sync + 'static>;
@@ -150,7 +149,7 @@ pub async fn events_ws(
         let socket_id = socket_id.clone();
         let ecm = ecm.clone();
         on_close_handler = Box::new(move |_| {
-            ecm.remove_consumer(&socket_id);
+            ecm.remove_consumer(&token.user_id, &socket_id);
         });
     }
 
@@ -164,7 +163,7 @@ pub async fn events_ws(
         Some(on_close_handler),
     )?;
 
-    ecm.add_consumer(socket);
+    ecm.add_consumer(id, socket);
 
     Ok(response)
 }
