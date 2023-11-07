@@ -4,7 +4,7 @@ use actix_web::{
 };
 
 use crate::{
-    auth::access_token::AccessToken,
+    auth::user::UserEx,
     db::DB,
     error::{macros::err, HResult},
     friends::friend_request::{UserIdParams, UserIdPath},
@@ -30,33 +30,28 @@ use crate::{
 pub async fn add_friend(
     db: DB,
     ecm: Data<EventConsumerManager>,
-    token: AccessToken,
+    me: UserEx,
     path: UserIdPath,
 ) -> HResult<Json<String>> {
-    if db.is_user_friend(&token.user_id, &path.user_id).await? {
+    if db.is_user_friend(&me.id, &path.user_id).await? {
         err!(400, "You are already friends with that user")?;
     }
-    let incoming = db.list_incoming_friend_requests(&token.user_id).await?;
+    let incoming = db.list_incoming_friend_requests(&me.id).await?;
     if incoming.iter().any(|i| i.user.id == path.user_id) {
         // We have an incoming friend request, add friends now
-        db.add_friends(&path.user_id, &token.user_id).await?;
+        db.add_friends(&path.user_id, &me.id).await?;
 
         // Notify the other party that their request has been accepted
-        let me_user = db
-            .get_user_by_id(&token.user_id)
-            .await?
-            .expect("A user not in the db sent an authenticated request?");
+
         ecm.broadcast_user(
             &path.user_id,
-            Event::FriendRequestUpdate {
-                user: &me_user.into(),
-            },
+            Event::FriendRequestUpdate { user: &me.into() },
         )
         .await;
 
         return Ok(Json("Friend successfully added".into()));
     }
-    let outgoing = db.list_outgoing_friend_requests(&token.user_id).await?;
+    let outgoing = db.list_outgoing_friend_requests(&me.id).await?;
     if outgoing.iter().any(|i| i.user.id == path.user_id) {
         err!(
             400,
@@ -68,21 +63,17 @@ pub async fn add_friend(
     sqlx::query!(
         r#"INSERT INTO friend_requests
             VALUES ($1,$2)"#,
-        &token.user_id,
+        &me.id,
         &path.user_id
     )
     .execute(&db.pool)
     .await?;
 
     // Notify the other party that I am now your friend
-    let me_user = db
-        .get_user_by_id(&token.user_id)
-        .await?
-        .expect("A user not in the db sent an authenticated request??? WTF!!!");
     ecm.broadcast_user(
         &path.user_id,
         Event::FriendRequestUpdate {
-            user: &me_user.into(),
+            user: &me.into(),
         },
     )
     .await;

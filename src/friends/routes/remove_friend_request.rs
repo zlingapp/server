@@ -4,7 +4,7 @@ use actix_web::{
 };
 
 use crate::{
-    auth::access_token::AccessToken,
+    auth::user::UserEx,
     db::DB,
     error::{macros::err, HResult},
     friends::friend_request::{UserIdParams, UserIdPath},
@@ -29,38 +29,32 @@ use crate::{
 pub async fn remove_friend_request(
     db: DB,
     ecm: Data<EventConsumerManager>,
-    token: AccessToken,
+    me: UserEx,
     path: UserIdPath,
 ) -> HResult<Json<String>> {
-    let incoming = db.list_incoming_friend_requests(&token.user_id).await?;
+    let incoming = db.list_incoming_friend_requests(&me.id).await?;
     if incoming.iter().any(|i| i.user.id == path.user_id) {
         // We want to deny the incoming request
         sqlx::query!(
             r#"DELETE FROM friend_requests
                 WHERE to_user=$1
                 AND from_user=$2"#,
-            &token.user_id,
+            &me.id,
             &path.user_id
         )
         .execute(&db.pool)
         .await?;
 
         // Notify them that we hate their guts and denied their friend request
-        let me_user = db
-            .get_user_by_id(&token.user_id)
-            .await?
-            .expect("A user not in the db sent an authenticated request?? WTF!!!");
         ecm.broadcast_user(
             &path.user_id,
-            Event::FriendRequestRemove {
-                user: &me_user.into(),
-            },
+            Event::FriendRequestRemove { user: &me.into() },
         )
         .await;
 
         return Ok(Json("Incoming friend request successfully denied".into()));
     }
-    let outgoing = db.list_outgoing_friend_requests(&token.user_id).await?;
+    let outgoing = db.list_outgoing_friend_requests(&me.id).await?;
     if outgoing.iter().any(|i| i.user.id == path.user_id) {
         // We want to cancel the outgoing friend request
         sqlx::query!(
@@ -68,21 +62,15 @@ pub async fn remove_friend_request(
                 WHERE to_user=$1
                 AND from_user=$2"#,
             &path.user_id,
-            &token.user_id
+            &me.id
         )
         .execute(&db.pool)
         .await?;
 
         // Notify them that we have rejected their trade request
-        let me_user = db
-            .get_user_by_id(&token.user_id)
-            .await?
-            .expect("A user not in the db sent an authenticated request?? WTF!!!");
         ecm.broadcast_user(
             &path.user_id,
-            Event::FriendRequestRemove {
-                user: &me_user.into(),
-            },
+            Event::FriendRequestRemove { user: &me.into() },
         )
         .await;
 

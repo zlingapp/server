@@ -55,6 +55,11 @@ impl From<User> for PublicUserInfo {
         }
     }
 }
+impl From<UserEx> for PublicUserInfo {
+    fn from(user: UserEx) -> Self {
+        Into::<User>::into(user).into()
+    }
+}
 
 pub struct UserEx(pub User);
 
