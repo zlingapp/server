@@ -70,7 +70,8 @@ impl FromRequest for User {
                 .or_err(500)?
                 .get_user_by_id(&token.user_id)
                 .await
-                .or_err(500)?.or_err(401)
+                .or_err(500)?
+                .or_err(401)
         })
     }
 }

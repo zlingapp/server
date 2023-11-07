@@ -72,9 +72,7 @@ pub async fn add_friend(
     // Notify the other party that I am now your friend
     ecm.broadcast_user(
         &path.user_id,
-        Event::FriendRequestUpdate {
-            user: &me.into(),
-        },
+        Event::FriendRequestUpdate { user: &me.into() },
     )
     .await;
 
