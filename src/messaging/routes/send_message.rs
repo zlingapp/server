@@ -10,7 +10,7 @@ use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    auth::user::{PublicUserInfo, UserEx},
+    auth::user::User,
     db::DB,
     error::{macros::err, HResult},
     media::routes::upload::UploadedFileInfo,
@@ -55,7 +55,7 @@ struct SendMessagePath {
 #[post("/guilds/{guild_id}/channels/{channel_id}/messages")]
 async fn send_message(
     db: DB,
-    user: UserEx,
+    user: User,
     req: Json<SendMessageRequest>,
     path: Path<SendMessagePath>,
     ecm: Data<EventConsumerManager>,
@@ -124,11 +124,7 @@ async fn send_message(
         } else {
             req.attachments
         },
-        author: PublicUserInfo {
-            id: user.0.id,
-            username: user.0.name,
-            avatar: user.0.avatar,
-        },
+        author: user.into(),
         created_at: DateTime::<Utc>::from_naive_utc_and_offset(record.created_at, Utc),
     };
 

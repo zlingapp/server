@@ -4,7 +4,7 @@ use actix_web::{
 };
 
 use crate::{
-    auth::user::UserEx,
+    auth::user::User,
     db::DB,
     error::{macros::err, HResult},
     friends::friend_request::{UserIdParams, UserIdPath},
@@ -29,7 +29,7 @@ use crate::{
 pub async fn remove_friend_request(
     db: DB,
     ecm: Data<EventConsumerManager>,
-    me: UserEx,
+    me: User,
     path: UserIdPath,
 ) -> HResult<Json<String>> {
     let incoming = db.list_incoming_friend_requests(&me.id).await?;

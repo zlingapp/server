@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    auth::user::UserEx,
+    auth::user::User,
     voice::{channel::create_channel, client::VoiceClient, VoiceChannels, VoiceClients},
 };
 
@@ -117,7 +117,7 @@ pub struct JoinVcReply {
 )]
 #[get("/voice/join")]
 pub async fn join_vc(
-    user: UserEx,
+    user: User,
     clients: Data<VoiceClients>,
     channels: Data<VoiceChannels>,
     wm: Data<WorkerManager>,

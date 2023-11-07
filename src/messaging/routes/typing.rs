@@ -7,7 +7,7 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 
 use crate::{
-    auth::user::UserEx,
+    auth::user::User,
     db::DB,
     error::{macros::err, HResult},
     realtime::pubsub::consumer_manager::EventConsumerManager,
@@ -36,7 +36,7 @@ pub struct TypingPath {
 pub async fn typing(
     db: DB,
     path: Path<TypingPath>,
-    user: UserEx,
+    user: User,
     ecm: Data<EventConsumerManager>,
 ) -> HResult<HttpResponse> {
     if !db
