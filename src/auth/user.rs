@@ -1,7 +1,5 @@
 use std::pin::Pin;
 
-use std::ops::Deref;
-
 use actix_web::FromRequest;
 
 use futures::Future;
@@ -56,23 +54,7 @@ impl From<User> for PublicUserInfo {
     }
 }
 
-pub struct UserEx(pub User);
-
-impl Deref for UserEx {
-    type Target = User;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Into<User> for UserEx {
-    fn into(self) -> User {
-        self.0
-    }
-}
-
-impl FromRequest for UserEx {
+impl FromRequest for User {
     type Error = HandlerError;
     type Future = Pin<Box<dyn Future<Output = HResult<Self>>>>;
 
@@ -89,7 +71,6 @@ impl FromRequest for UserEx {
                 .get_user_by_id(&token.user_id)
                 .await
                 .or_err(500)?
-                .map(|u| UserEx(u))
                 .or_err(401)
         })
     }

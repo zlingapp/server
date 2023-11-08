@@ -7,10 +7,10 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 
 use crate::{
-    auth::user::UserEx,
+    auth::user::User,
     db::DB,
     error::{macros::err, HResult},
-    realtime::pubsub::consumer_manager::EventConsumerManager,
+    realtime::pubsub::pubsub::PubSub,
 };
 
 #[derive(Deserialize, IntoParams)]
@@ -36,8 +36,8 @@ pub struct TypingPath {
 pub async fn typing(
     db: DB,
     path: Path<TypingPath>,
-    user: UserEx,
-    ecm: Data<EventConsumerManager>,
+    user: User,
+    pubsub: Data<PubSub>,
 ) -> HResult<HttpResponse> {
     if !db
         .can_user_send_message_in(&user.id, &path.guild_id, &path.channel_id)
@@ -46,7 +46,7 @@ pub async fn typing(
         return err!(403);
     }
 
-    ecm.send_typing(&path.channel_id, &user).await;
+    pubsub.send_typing(&path.channel_id, &user).await;
 
     Ok(HttpResponse::Ok().finish())
 }

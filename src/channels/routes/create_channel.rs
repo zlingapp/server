@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 
 use crate::{
     auth::access_token::AccessToken, channels::channel::ChannelType, db::DB,
-    guilds::routes::GuildPath, realtime::pubsub::consumer_manager::EventConsumerManager,
+    guilds::routes::GuildPath, realtime::pubsub::pubsub::PubSub,
 };
 use crate::{
     error::{macros::err, HResult},
@@ -57,7 +57,7 @@ async fn create_channel(
     token: AccessToken,
     req: Json<CreateChannelRequest>,
     path: GuildPath,
-    ecm: Data<EventConsumerManager>,
+    pubsub: Data<PubSub>,
 ) -> HResult<Json<CreateChannelResponse>> {
     let user_in_guild = db.is_user_in_guild(&token.user_id, &path.guild_id).await?;
 
@@ -80,7 +80,7 @@ async fn create_channel(
     .await?
     .id;
 
-    ecm.notify_guild_channel_list_update(&path.guild_id).await;
+    pubsub.notify_guild_channel_list_update(&path.guild_id).await;
 
     Ok(Json(CreateChannelResponse { id: channel_id }))
 }

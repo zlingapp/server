@@ -1,6 +1,6 @@
 use actix_web::{get, web::Json};
 
-use crate::auth::user::{User, UserEx};
+use crate::auth::user::User;
 
 /// Who am I?
 ///
@@ -13,6 +13,6 @@ use crate::auth::user::{User, UserEx};
     security(("token" = []))
 )]
 #[get("/auth/whoami")]
-pub async fn whoami(user: UserEx) -> Json<User> {
-    Json(user.0)
+pub async fn whoami(user: User) -> Json<User> {
+    Json(user)
 }
