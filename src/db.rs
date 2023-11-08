@@ -230,7 +230,7 @@ impl Database {
     ) -> Result<Vec<FriendRequest>, sqlx::Error> {
         sqlx::query_as!(
             PublicUserInfo,
-            r#"SELECT id,name AS "username",avatar 
+            r#"SELECT id, name AS "username", avatar 
                FROM friend_requests, users
                WHERE from_user = id AND to_user = $1"#,
             id

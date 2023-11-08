@@ -14,7 +14,7 @@ use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use voice::{VoiceChannels, VoiceClients};
 
-use crate::{db::DB, realtime::pubsub::consumer_manager::EventConsumerManager};
+use crate::{db::DB, realtime::pubsub::pubsub::PubSub};
 
 mod apidocs;
 mod auth;
@@ -81,7 +81,7 @@ async fn main() -> std::io::Result<()> {
     let voice_channels: Data<VoiceChannels> = Data::new(Mutex::new(HashMap::new()));
 
     // pubsub
-    let event_manager = Data::new(EventConsumerManager::new());
+    let event_manager = Data::new(PubSub::new());
 
     let mut server = HttpServer::new(move || {
         let oapi = apidocs::setup_oapi();

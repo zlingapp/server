@@ -8,7 +8,8 @@ use crate::{
 
 /// List Friends
 ///
-/// Lists all users who are friends with you
+/// Lists all users who are friends with you. Users are only considered
+/// "friends" when a friend request is fully accepted on both sides.
 #[utoipa::path(
     responses(
         (status = OK, description="Friends list", body=Vec<PublicUserInfo>),
@@ -30,5 +31,6 @@ pub async fn list_friends(db: DB, token: AccessToken) -> HResult<Json<Vec<Public
     .fetch_all(&db.pool)
     .await
     .map(|r| Json(r))?;
+
     Ok(result)
 }

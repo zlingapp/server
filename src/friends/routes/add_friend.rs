@@ -8,7 +8,7 @@ use crate::{
     db::DB,
     error::{macros::err, HResult},
     friends::friend_request::{UserIdParams, UserIdPath},
-    realtime::pubsub::consumer_manager::{Event, EventConsumerManager},
+    realtime::pubsub::pubsub::{Event, PubSub},
 };
 
 /// Add a friend
@@ -29,7 +29,7 @@ use crate::{
 #[post("/friends/requests/{user_id}")]
 pub async fn add_friend(
     db: DB,
-    ecm: Data<EventConsumerManager>,
+    pubsub: Data<PubSub>,
     me: User,
     path: UserIdPath,
 ) -> HResult<Json<String>> {
@@ -43,7 +43,7 @@ pub async fn add_friend(
 
         // Notify the other party that their request has been accepted
 
-        ecm.broadcast_user(
+        pubsub.send_to(
             &path.user_id,
             Event::FriendRequestUpdate { user: &me.into() },
         )
@@ -70,7 +70,7 @@ pub async fn add_friend(
     .await?;
 
     // Notify the other party that I am now your friend
-    ecm.broadcast_user(
+    pubsub.send_to(
         &path.user_id,
         Event::FriendRequestUpdate { user: &me.into() },
     )

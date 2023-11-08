@@ -15,7 +15,7 @@ use crate::{
     error::{macros::err, HResult},
     media::routes::upload::UploadedFileInfo,
     messaging::message::Message,
-    realtime::pubsub::consumer_manager::EventConsumerManager,
+    realtime::pubsub::pubsub::PubSub,
 };
 
 #[derive(Deserialize, ToSchema)]
@@ -58,7 +58,7 @@ async fn send_message(
     user: User,
     req: Json<SendMessageRequest>,
     path: Path<SendMessagePath>,
-    ecm: Data<EventConsumerManager>,
+    pubsub: Data<PubSub>,
 ) -> HResult<Json<SendMessageResponse>> {
     // get inner value
     let req = req.0;
@@ -129,7 +129,7 @@ async fn send_message(
     };
 
     // tell people listening to this channel that there's a new message
-    ecm.notify_of_new_message(&path.channel_id, &message).await;
+    pubsub.notify_of_new_message(&path.channel_id, &message).await;
 
     Ok(Json(SendMessageResponse {
         id: message.id,

@@ -4,7 +4,7 @@ use crate::{
     error::macros::err,
     error::HResult,
     friends::friend_request::{UserIdParams, UserIdPath},
-    realtime::pubsub::consumer_manager::{Event, EventConsumerManager},
+    realtime::pubsub::pubsub::{Event, PubSub},
 };
 use actix_web::{
     delete,
@@ -26,7 +26,7 @@ use actix_web::{
 #[delete("/friends/{user_id}")]
 pub async fn remove_friend(
     db: DB,
-    ecm: Data<EventConsumerManager>,
+    pubsub: Data<PubSub>,
     path: UserIdPath,
     token: AccessToken,
 ) -> HResult<Json<String>> {
@@ -48,7 +48,7 @@ pub async fn remove_friend(
         .get_user_by_id(&token.user_id)
         .await?
         .expect("A user not in the db sent an authenticated request?? WTF!!!");
-    ecm.broadcast_user(
+    pubsub.send_to(
         &path.user_id,
         Event::FriendRemove {
             user: &me_user.into(),

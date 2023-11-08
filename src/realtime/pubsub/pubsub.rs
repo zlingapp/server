@@ -9,13 +9,13 @@ use crate::{
 };
 
 use super::{
-    consumer_map::ConsumerMap,
+    pubsub_map::PubSubMap,
     topic::{Topic, TopicType},
 };
 use std::sync::{Arc, RwLock};
 
-pub struct EventConsumerManager {
-    consumers: RwLock<ConsumerMap>,
+pub struct PubSub {
+    map: RwLock<PubSubMap>,
 }
 
 #[derive(Serialize)]
@@ -46,21 +46,22 @@ pub enum Event<'l> {
     FriendRemove { user: &'l PublicUserInfo },
 }
 
-impl EventConsumerManager {
+impl PubSub {
     pub fn new() -> Self {
         Self {
-            consumers: RwLock::new(ConsumerMap::new()),
+            map: RwLock::new(PubSubMap::new()),
         }
     }
 
     pub async fn broadcast(&self, topic: &Topic, event: Event<'_>) {
-        let consumers = self.consumers.read().unwrap();
-        if let Some(consumers) = consumers.topic_to_cons.get(topic) {
-            let mut futures = Vec::with_capacity(consumers.len());
+        let map = self.map.read().unwrap();
+        
+        if let Some(subscribed_sockets) = map.topic_to_sockets.get(topic) {
+            let mut futures = Vec::with_capacity(subscribed_sockets.len());
 
-            for consumer in consumers {
+            for socket in subscribed_sockets {
                 futures.push(
-                    consumer.send(
+                    socket.send(
                         json!({
                             "topic": topic,
                             "event": event,
@@ -73,43 +74,48 @@ impl EventConsumerManager {
             join_all(futures).await;
         }
     }
-    pub async fn broadcast_user(&self, user: &str, event: Event<'_>) {
-        if let Some(consumers) = self.consumers.read().unwrap().user_id_to_sockets.get(user) {
-            let mut futures = Vec::with_capacity(consumers.len());
-            for consumer in consumers {
+    pub async fn send_to(&self, user_id: &str, event: Event<'_>) {
+        let map = self.map.read().unwrap();
+
+        if let Some(user_sockets) = map.user_id_to_sockets.get(user_id) {
+            let mut futures = Vec::with_capacity(user_sockets.len());
+            
+            for socket in user_sockets {
                 futures.push(
-                    consumer.send(
-                        json!({"topic": Topic::new(TopicType::User,user.into()),"event":event})
-                            .to_string(),
+                    socket.send(
+                        json!({
+                            "topic": Topic::new(TopicType::User, user_id.into()), 
+                            "event": event
+                        }).to_string(),
                     ),
                 )
             }
+
+            join_all(futures).await;
         }
     }
-}
 
-// re-export ConsumerMap methods
-impl EventConsumerManager {
-    pub fn add_consumer(&self, user_id: String, consumer: Arc<Socket>) {
-        self.consumers
+    // re-export PubSubMap methods
+    pub fn add_socket(&self, user_id: String, socket: Arc<Socket>) {
+        self.map
             .write()
             .unwrap()
-            .add_consumer(user_id, consumer);
+            .add_socket(user_id, socket);
     }
 
-    pub fn remove_consumer(&self, user_id: &str, socket_id: &str) {
-        self.consumers
+    pub fn remove_socket(&self, user_id: &str, socket_id: &str) {
+        self.map
             .write()
             .unwrap()
-            .remove_consumer(user_id, socket_id);
+            .remove_socket(user_id, socket_id);
     }
 
     pub fn subscribe(&self, socket_id: &str, topic: Topic) -> Result<(), ()> {
-        self.consumers.write().unwrap().subscribe(socket_id, topic)
+        self.map.write().unwrap().subscribe(socket_id, topic)
     }
 
     pub fn unsubscribe(&self, socket_id: &str, topic: &Topic) -> Result<(), ()> {
-        self.consumers
+        self.map
             .write()
             .unwrap()
             .unsubscribe(socket_id, topic)

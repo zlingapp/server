@@ -8,7 +8,7 @@ use crate::{
     db::DB,
     error::{macros::err, HResult},
     friends::friend_request::{UserIdParams, UserIdPath},
-    realtime::pubsub::consumer_manager::{Event, EventConsumerManager},
+    realtime::pubsub::pubsub::{Event, PubSub},
 };
 
 /// Remove a friend request
@@ -18,9 +18,9 @@ use crate::{
 #[utoipa::path(
     params(UserIdParams),
     responses(
-        (status = OK,description = "Incoming friend request denied",body = String),
-        (status = OK,description = "Outgoing friend request cancelled",body = String),
-        (status = BAD_REQUEST,description = "No outgoing or incoming friend request with that user",body = String)
+        (status = OK, description = "Incoming friend request denied", body = String),
+        (status = OK, description = "Outgoing friend request cancelled", body = String),
+        (status = BAD_REQUEST, description = "No outgoing or incoming friend request with that user", body = String)
     ),
     tag = "friends",
     security(("token" = []))
@@ -28,7 +28,7 @@ use crate::{
 #[delete("/friends/requests/{user_id}")]
 pub async fn remove_friend_request(
     db: DB,
-    ecm: Data<EventConsumerManager>,
+    pubsub: Data<PubSub>,
     me: User,
     path: UserIdPath,
 ) -> HResult<Json<String>> {
@@ -46,7 +46,7 @@ pub async fn remove_friend_request(
         .await?;
 
         // Notify them that we hate their guts and denied their friend request
-        ecm.broadcast_user(
+        pubsub.send_to(
             &path.user_id,
             Event::FriendRequestRemove { user: &me.into() },
         )
@@ -68,7 +68,7 @@ pub async fn remove_friend_request(
         .await?;
 
         // Notify them that we have rejected their trade request
-        ecm.broadcast_user(
+        pubsub.send_to(
             &path.user_id,
             Event::FriendRequestRemove { user: &me.into() },
         )
