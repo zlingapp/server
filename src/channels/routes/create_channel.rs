@@ -80,7 +80,9 @@ async fn create_channel(
     .await?
     .id;
 
-    pubsub.notify_guild_channel_list_update(&path.guild_id).await;
+    pubsub
+        .notify_guild_channel_list_update(&path.guild_id)
+        .await;
 
     Ok(Json(CreateChannelResponse { id: channel_id }))
 }

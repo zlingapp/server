@@ -43,11 +43,12 @@ pub async fn add_friend(
 
         // Notify the other party that their request has been accepted
 
-        pubsub.send_to(
-            &path.user_id,
-            Event::FriendRequestUpdate { user: &me.into() },
-        )
-        .await;
+        pubsub
+            .send_to(
+                &path.user_id,
+                Event::FriendRequestUpdate { user: &me.into() },
+            )
+            .await;
 
         return Ok(Json("Friend successfully added".into()));
     }
@@ -70,11 +71,12 @@ pub async fn add_friend(
     .await?;
 
     // Notify the other party that I am now your friend
-    pubsub.send_to(
-        &path.user_id,
-        Event::FriendRequestUpdate { user: &me.into() },
-    )
-    .await;
+    pubsub
+        .send_to(
+            &path.user_id,
+            Event::FriendRequestUpdate { user: &me.into() },
+        )
+        .await;
 
     Ok(Json("Friend request sucessfully sent".into()))
 }

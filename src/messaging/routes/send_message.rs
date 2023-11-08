@@ -129,7 +129,9 @@ async fn send_message(
     };
 
     // tell people listening to this channel that there's a new message
-    pubsub.notify_of_new_message(&path.channel_id, &message).await;
+    pubsub
+        .notify_of_new_message(&path.channel_id, &message)
+        .await;
 
     Ok(Json(SendMessageResponse {
         id: message.id,

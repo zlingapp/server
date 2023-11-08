@@ -46,11 +46,12 @@ pub async fn remove_friend_request(
         .await?;
 
         // Notify them that we hate their guts and denied their friend request
-        pubsub.send_to(
-            &path.user_id,
-            Event::FriendRequestRemove { user: &me.into() },
-        )
-        .await;
+        pubsub
+            .send_to(
+                &path.user_id,
+                Event::FriendRequestRemove { user: &me.into() },
+            )
+            .await;
 
         return Ok(Json("Incoming friend request successfully denied".into()));
     }
@@ -68,11 +69,12 @@ pub async fn remove_friend_request(
         .await?;
 
         // Notify them that we have rejected their trade request
-        pubsub.send_to(
-            &path.user_id,
-            Event::FriendRequestRemove { user: &me.into() },
-        )
-        .await;
+        pubsub
+            .send_to(
+                &path.user_id,
+                Event::FriendRequestRemove { user: &me.into() },
+            )
+            .await;
 
         return Ok(Json("Outgoing friend request sucessfully cancelled".into()));
     }

@@ -55,7 +55,7 @@ impl PubSub {
 
     pub async fn broadcast(&self, topic: &Topic, event: Event<'_>) {
         let map = self.map.read().unwrap();
-        
+
         if let Some(subscribed_sockets) = map.topic_to_sockets.get(topic) {
             let mut futures = Vec::with_capacity(subscribed_sockets.len());
 
@@ -79,14 +79,15 @@ impl PubSub {
 
         if let Some(user_sockets) = map.user_id_to_sockets.get(user_id) {
             let mut futures = Vec::with_capacity(user_sockets.len());
-            
+
             for socket in user_sockets {
                 futures.push(
                     socket.send(
                         json!({
-                            "topic": Topic::new(TopicType::User, user_id.into()), 
+                            "topic": Topic::new(TopicType::User, user_id.into()),
                             "event": event
-                        }).to_string(),
+                        })
+                        .to_string(),
                     ),
                 )
             }
@@ -97,17 +98,11 @@ impl PubSub {
 
     // re-export PubSubMap methods
     pub fn add_socket(&self, user_id: String, socket: Arc<Socket>) {
-        self.map
-            .write()
-            .unwrap()
-            .add_socket(user_id, socket);
+        self.map.write().unwrap().add_socket(user_id, socket);
     }
 
     pub fn remove_socket(&self, user_id: &str, socket_id: &str) {
-        self.map
-            .write()
-            .unwrap()
-            .remove_socket(user_id, socket_id);
+        self.map.write().unwrap().remove_socket(user_id, socket_id);
     }
 
     pub fn subscribe(&self, socket_id: &str, topic: Topic) -> Result<(), ()> {
@@ -115,10 +110,7 @@ impl PubSub {
     }
 
     pub fn unsubscribe(&self, socket_id: &str, topic: &Topic) -> Result<(), ()> {
-        self.map
-            .write()
-            .unwrap()
-            .unsubscribe(socket_id, topic)
+        self.map.write().unwrap().unsubscribe(socket_id, topic)
     }
 
     pub async fn notify_of_new_message(&self, channel_id: &str, message: &Message) {

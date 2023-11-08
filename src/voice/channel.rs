@@ -3,29 +3,34 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::options::{router_options, worker_settings};
-use crate::voice::{client::VoiceClient, VoiceChannels, VoiceClients};
+use crate::{
+    options,
+    voice::{client::VoiceClient, VoiceChannels, VoiceClients},
+};
 use actix_web::web::Data;
 use log::{info, warn};
 use mediasoup::{
     prelude::{AudioLevelObserver, AudioLevelObserverOptions},
     router::Router,
-    worker::Worker,
-    worker_manager::WorkerManager,
+    webrtc_server::WebRtcServer,
+    webrtc_transport::WebRtcTransport,
+    worker::RequestError,
 };
+
+use super::pool::VoiceWorkerPool;
 
 pub struct VoiceChannel {
     pub id: String,
     pub clients: Mutex<Vec<Arc<VoiceClient>>>,
     pub router: Router,
-    pub worker: Worker,
+    pub webrtc_server: WebRtcServer,
     pub al_observer: AudioLevelObserver,
 }
 
 impl VoiceChannel {
-    pub async fn new_with_id(id: String, wm: Arc<WorkerManager>) -> Self {
-        let worker = wm.create_worker(worker_settings()).await.unwrap();
-        let router = worker.create_router(router_options()).await.unwrap();
+    pub async fn new_with_id(id: String, vwp: &Mutex<VoiceWorkerPool>) -> Self {
+        // TODO: do not unwrap this
+        let (router, webrtc_server) = { vwp.lock().unwrap().allocate_router().await.unwrap() };
 
         let al_observer = router
             .create_audio_level_observer({
@@ -48,7 +53,7 @@ impl VoiceChannel {
             id: id.to_owned(),
             clients: Mutex::new(Vec::new()),
             router,
-            worker,
+            webrtc_server,
             al_observer,
         }
     }
@@ -107,6 +112,14 @@ impl VoiceChannel {
             .await;
         self.notify_client_left(client).await;
     }
+
+    pub async fn create_webrtc_transport(&self) -> Result<WebRtcTransport, RequestError> {
+        self.router
+            .create_webrtc_transport(options::webrtc_transport_options(
+                self.webrtc_server.clone(),
+            ))
+            .await
+    }
 }
 
 impl Drop for VoiceChannel {
@@ -118,9 +131,9 @@ impl Drop for VoiceChannel {
 pub async fn create_channel(
     id: &str,
     channels: Data<VoiceChannels>,
-    wm: Arc<WorkerManager>,
+    vwp: &Mutex<VoiceWorkerPool>,
 ) -> Arc<VoiceChannel> {
-    let channel = VoiceChannel::new_with_id(id.to_owned(), wm).await;
+    let channel = VoiceChannel::new_with_id(id.to_owned(), vwp).await;
     let channel = Arc::new(channel);
 
     let mut channels = channels.lock().unwrap();

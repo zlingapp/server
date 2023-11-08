@@ -73,7 +73,8 @@ pub async fn delete_message(
             .await?;
 
         // tell clients that the message got deleted
-        pubsub.notify_message_deleted(&path.channel_id, &message.id)
+        pubsub
+            .notify_message_deleted(&path.channel_id, &message.id)
             .await;
     } else {
         // note: we don't want to return a 404 if the message doesn't exist, because

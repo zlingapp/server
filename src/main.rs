@@ -14,7 +14,7 @@ use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use voice::{VoiceChannels, VoiceClients};
 
-use crate::{db::DB, realtime::pubsub::pubsub::PubSub};
+use crate::{db::DB, realtime::pubsub::pubsub::PubSub, voice::pool::VoiceWorkerPool};
 
 mod apidocs;
 mod auth;
@@ -76,7 +76,12 @@ async fn main() -> std::io::Result<()> {
     let pool: DB = Data::new(Database::with_pool(pool));
 
     // voice chat related
-    let voice_worker_manager = Data::new(WorkerManager::new());
+    let worker_manager = WorkerManager::new();
+    let voice_ports = options::voice_ports();
+    let voice_worker_pool = Data::new(Mutex::new(VoiceWorkerPool::new(
+        worker_manager,
+        voice_ports,
+    )));
     let voice_clients: Data<VoiceClients> = Data::new(Mutex::new(HashMap::new()));
     let voice_channels: Data<VoiceChannels> = Data::new(Mutex::new(HashMap::new()));
 
@@ -102,7 +107,7 @@ async fn main() -> std::io::Result<()> {
             // authentication
             .configure(auth::routes::configure_app)
             // voice chat
-            .app_data(Data::clone(&voice_worker_manager))
+            .app_data(Data::clone(&voice_worker_pool))
             .app_data(Data::clone(&voice_clients))
             .app_data(Data::clone(&voice_channels))
             .configure(voice::routes::configure_app)

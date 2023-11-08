@@ -9,13 +9,17 @@ use std::{
 use lazy_static::lazy_static;
 use log::{error, info, warn};
 use mediasoup::{
+    data_structures::Protocol,
     prelude::ListenIp,
     router::RouterOptions,
     rtp_parameters::{
         MimeTypeAudio, MimeTypeVideo, RtcpFeedback, RtpCodecCapability,
         RtpCodecParametersParameters,
     },
-    webrtc_transport::{TransportListenIps, WebRtcTransportOptions},
+    webrtc_server::{
+        WebRtcServer, WebRtcServerListenInfo, WebRtcServerListenInfos, WebRtcServerOptions,
+    },
+    webrtc_transport::WebRtcTransportOptions,
     worker::{WorkerLogLevel, WorkerSettings},
 };
 use rustls::ServerConfig;
@@ -40,20 +44,34 @@ where
     }
 }
 
+fn parse_range(range: &str) -> (u16, u16) {
+    let mut split = range.split('-');
+
+    let min = split.next().unwrap().parse().unwrap();
+    let max = match split.next().and_then(|s| s.parse().ok()) {
+        Some(max) => max,
+        None => min,
+    };
+
+    (min, max)
+}
+
 lazy_static! {
     pub static ref NUM_WEB_WORKERS: usize = var("NUM_WEB_WORKERS", "4");
 
-    static ref RTC_PORT_MIN: u16 = var("RTC_PORT_MIN", "10000");
-    static ref RTC_PORT_MAX: u16 = var("RTC_PORT_MAX", "11000");
+    static ref RTC_PORT_RANGE: (u16, u16) = {
+        let ports: String = var("WRTC_PORTS", "10000");
+        parse_range(&ports)
+    };
 
-    static ref ANNOUNCE_IP: IpAddr = IpAddr::V4(var("ANNOUNCE_IP", "127.0.0.1"));
+    static ref ANNOUNCE_IP: IpAddr = IpAddr::V4(var("WRTC_ANNOUNCE_IP", "127.0.0.1"));
 
-    static ref ENABLE_UDP: bool = var("ENABLE_UDP", "true");
-    static ref ENABLE_TCP: bool = var("ENABLE_TCP", "true");
-    static ref PREFER_UDP: bool = var("PREFER_UDP", "true");
-    static ref PREFER_TCP: bool = var("PREFER_TCP", "false");
+    static ref ENABLE_UDP: bool = var("WRTC_ENABLE_UDP", "true");
+    static ref ENABLE_TCP: bool = var("WRTC_ENABLE_TCP", "true");
+    static ref PREFER_UDP: bool = var("WRTC_PREFER_UDP", "true");
+    static ref PREFER_TCP: bool = var("WRTC_PREFER_TCP", "false");
 
-    static ref INITIAL_AVAILABLE_OUTGOING_BITRATE: u32 = var("INITIAL_AVAILABLE_OUTGOING_BITRATE", "600000");
+    static ref INITIAL_AVAILABLE_OUTGOING_BITRATE: u32 = var("WRTC_INITIAL_AVAILABLE_OUTGOING_BITRATE", "600000");
 
     static ref DB_HOST: String = var("DB_HOST", "localhost");
     static ref DB_PORT: u16 = var("DB_PORT", "5432");
@@ -116,7 +134,7 @@ pub fn media_codecs() -> Vec<RtpCodecCapability> {
             rtcp_feedback: vec![RtcpFeedback::TransportCc],
         },
         RtpCodecCapability::Video {
-            mime_type: MimeTypeVideo::Vp8,
+            mime_type: MimeTypeVideo::Vp9,
             preferred_payload_type: None,
             clock_rate: NonZeroU32::new(90000).unwrap(),
             parameters: RtpCodecParametersParameters::default(),
@@ -134,7 +152,7 @@ pub fn media_codecs() -> Vec<RtpCodecCapability> {
 pub fn worker_settings() -> WorkerSettings {
     let mut worker_settings = WorkerSettings::default();
     worker_settings.log_level = WorkerLogLevel::Warn;
-    worker_settings.rtc_ports_range = (*RTC_PORT_MIN)..=(*RTC_PORT_MAX);
+    worker_settings.rtc_ports_range = (RTC_PORT_RANGE.0)..=(RTC_PORT_RANGE.1);
     worker_settings
 }
 
@@ -142,11 +160,8 @@ pub fn router_options() -> RouterOptions {
     RouterOptions::new(media_codecs())
 }
 
-pub fn webrtc_transport_options() -> WebRtcTransportOptions {
-    let mut opts = WebRtcTransportOptions::new(TransportListenIps::new(ListenIp {
-        ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-        announced_ip: Some(*ANNOUNCE_IP),
-    }));
+pub fn webrtc_transport_options(webrtc_server: WebRtcServer) -> WebRtcTransportOptions {
+    let mut opts = WebRtcTransportOptions::new_with_server(webrtc_server);
 
     opts.enable_udp = *ENABLE_UDP;
     opts.enable_tcp = *ENABLE_TCP;
@@ -155,6 +170,43 @@ pub fn webrtc_transport_options() -> WebRtcTransportOptions {
     opts.initial_available_outgoing_bitrate = *INITIAL_AVAILABLE_OUTGOING_BITRATE;
 
     opts
+}
+
+pub fn webrtc_server_options(port: u16) -> WebRtcServerOptions {
+    let listen_ip = ListenIp {
+        ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+        announced_ip: Some(*ANNOUNCE_IP),
+    };
+
+    let mut listen_infos = Vec::with_capacity(2);
+
+    if *ENABLE_UDP {
+        listen_infos.push(WebRtcServerListenInfo {
+            listen_ip,
+            port: Some(port),
+            protocol: Protocol::Udp,
+        });
+    }
+
+    if *ENABLE_TCP {
+        listen_infos.push(WebRtcServerListenInfo {
+            listen_ip,
+            port: Some(port),
+            protocol: Protocol::Tcp,
+        });
+    }
+
+    let mut wrtc_listen_infos = WebRtcServerListenInfos::new(listen_infos.pop().unwrap());
+    if let Some(listen_info) = listen_infos.pop() {
+        // god I hate mediasoup's rust API sometimes
+        wrtc_listen_infos = wrtc_listen_infos.insert(listen_info);
+    }
+
+    WebRtcServerOptions::new(wrtc_listen_infos)
+}
+
+pub fn voice_ports() -> Vec<u16> {
+    (RTC_PORT_RANGE.0..=RTC_PORT_RANGE.1).rev().collect()
 }
 
 pub fn db_conn_string() -> String {
@@ -208,8 +260,13 @@ pub fn ssl_config() -> rustls::ServerConfig {
 }
 
 pub fn initialize_all() {
-    lazy_static::initialize(&RTC_PORT_MIN);
-    lazy_static::initialize(&RTC_PORT_MAX);
+    lazy_static::initialize(&RTC_PORT_RANGE);
+
+    if RTC_PORT_RANGE.0 > RTC_PORT_RANGE.1 {
+        error!("Minimum RTC port cannot be greater than maximum RTC port");
+        std::process::exit(1);
+    }
+
     lazy_static::initialize(&ANNOUNCE_IP);
     lazy_static::initialize(&INITIAL_AVAILABLE_OUTGOING_BITRATE);
 
@@ -256,21 +313,53 @@ pub fn initialize_all() {
 }
 
 pub fn print_all() {
-    info!("config: RTC Ports: {}-{}", *RTC_PORT_MIN, *RTC_PORT_MAX);
-    info!("config: Announce IP: {}", *ANNOUNCE_IP);
+    let port_range = RTC_PORT_RANGE.1 - RTC_PORT_RANGE.0 + 1;
+
+    if port_range == 1 {
+        info!(
+            "config: WebRTC Port: {} (will spawn 1 WebRTC server)",
+            RTC_PORT_RANGE.0
+        );
+    } else {
+        info!(
+            "config: WebRTC Ports: {}-{} (will spawn {} WebRTC servers)",
+            RTC_PORT_RANGE.0, RTC_PORT_RANGE.1, port_range
+        );
+
+        let num_cpus = std::thread::available_parallelism()
+            .unwrap_or(1usize.try_into().unwrap())
+            .get();
+
+        if port_range > 4 && num_cpus < port_range as usize {
+            warn!(
+                "Each voice port will spawn its own WebRTC server! You have captured {} ports with WRTC_PORTS, but you only have {} CPU threads. You may want to decrease RTC_PORT_MAX to {} or less.", 
+                port_range,
+                num_cpus,
+                (RTC_PORT_RANGE.0 as usize) + num_cpus - 1
+            );
+        }
+    }
+
+    info!("config: WebRTC Announce IP: {}", *ANNOUNCE_IP);
 
     if ANNOUNCE_IP.is_loopback() {
-        warn!("\n\nANNOUNCE_IP is set to a loopback address, voice clients will probably not be able to connect!\nSet it to your server's public IP!\n")
+        warn!("WRTC_ANNOUNCE_IP is set to a loopback address, voice clients will probably not be able to connect! Set it to your server's public IP!")
     }
 
     info!(
-        "config: Initial Available Outgoing Bitrate: {}bps",
+        "config: WebRTC Initial Available Outgoing Bitrate: {}bps",
         *INITIAL_AVAILABLE_OUTGOING_BITRATE
     );
-    info!("config: UDP Enabled: {}", *ENABLE_UDP);
-    info!("config: TCP Enabled: {}", *ENABLE_TCP);
     info!(
-        "config: Preferred: {}",
+        "config: WebRTC UDP Enabled: {}",
+        if *ENABLE_UDP { "yes" } else { "no" }
+    );
+    info!(
+        "config: WebRTC TCP Enabled: {}",
+        if *ENABLE_TCP { "yes" } else { "no" }
+    );
+    info!(
+        "config: WebRTC Preferred Protocol: {}",
         if *PREFER_UDP { "UDP" } else { "TCP" }
     );
     info!(

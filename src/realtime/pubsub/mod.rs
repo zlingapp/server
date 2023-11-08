@@ -1,8 +1,8 @@
 use utoipa::OpenApi;
 
+pub mod events;
 pub mod pubsub;
 pub mod pubsub_map;
-pub mod events;
 pub mod topic;
 
 #[derive(OpenApi)]

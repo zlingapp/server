@@ -48,13 +48,14 @@ pub async fn remove_friend(
         .get_user_by_id(&token.user_id)
         .await?
         .expect("A user not in the db sent an authenticated request?? WTF!!!");
-    pubsub.send_to(
-        &path.user_id,
-        Event::FriendRemove {
-            user: &me_user.into(),
-        },
-    )
-    .await;
+    pubsub
+        .send_to(
+            &path.user_id,
+            Event::FriendRemove {
+                user: &me_user.into(),
+            },
+        )
+        .await;
 
     Ok(Json("success".to_string()))
 }

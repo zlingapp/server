@@ -37,11 +37,9 @@ impl PubSubMap {
     pub fn remove_socket(&mut self, user_id: &str, socket_id: &str) {
         if let Some((socket, topics)) = self.socket_id_to_socket_and_topics.remove(socket_id) {
             for topic in topics {
-                self.topic_to_sockets
-                    .entry(topic)
-                    .and_modify(|sockets| {
-                        sockets.remove(&socket);
-                    });
+                self.topic_to_sockets.entry(topic).and_modify(|sockets| {
+                    sockets.remove(&socket);
+                });
             }
         }
 
@@ -53,8 +51,7 @@ impl PubSubMap {
     }
 
     pub fn subscribe(&mut self, socket_id: &str, topic: Topic) -> Result<(), ()> {
-        if let Some((ref socket, topics)) = self.socket_id_to_socket_and_topics.get_mut(socket_id)
-        {
+        if let Some((ref socket, topics)) = self.socket_id_to_socket_and_topics.get_mut(socket_id) {
             topics.push(topic.clone());
 
             if let Some(sockets) = self.topic_to_sockets.get_mut(&topic) {
