@@ -114,6 +114,7 @@ See [the options.rs file](src/options.rs) for details.
 |`DB_PASSWORD`|`string`|`dev`|Password for user|
 |`DB_NAME`|`string`|`zling-backend`|Database name|
 |`DB_POOL_MAX_CONNS`|`number`|`5`|Max open query connections|
+|`DB_RUN_MIGRATIONS`|`bool`|`true`|Should the necessary SQL migrations be run on server start? This is highly recommended as Zling is actively being updated and database schema may change. Only disable if you have your own system for making sure the database schema is up to date.|
 
 #### Voice Chat
 |Variable|Type|Default|Description|

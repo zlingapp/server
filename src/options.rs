@@ -79,6 +79,7 @@ lazy_static! {
     static ref DB_PASSWORD: String = var("DB_PASSWORD", "dev");
     static ref DB_NAME: String = var("DB_NAME", "zling-backend");
     static ref DB_POOL_MAX_CONNS: u32 = var("DB_POOL_MAX_CONNS", "5");
+    pub static ref DB_RUN_MIGRATIONS: bool = var("DB_RUN_MIGRATIONS", "true");
 
     pub static ref BIND_ADDR: SocketAddr = var("BIND_ADDR", "127.0.0.1:8080");
 

@@ -7,9 +7,9 @@ use actix_web::{
     App, HttpServer,
 };
 use db::Database;
-use log::{error, info};
+use log::{error, info, warn};
 use mediasoup::worker_manager::WorkerManager;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::{migrate, postgres::PgPoolOptions};
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use voice::{VoiceChannels, VoiceClients};
@@ -72,6 +72,21 @@ async fn main() -> std::io::Result<()> {
             std::process::exit(1);
         }
     };
+
+    if *options::DB_RUN_MIGRATIONS {
+        info!("Running database migrations...");
+
+        migrate!()
+            .run(&pool)
+            .await
+            .map_err(|e| {
+                error!("Failed to run migrations: {}", e);
+                std::process::exit(1);
+            })
+            .unwrap();
+    } else {
+        warn!("Database migrations will not be run. Inconsistent database state may occur!")
+    }
 
     let pool: DB = Data::new(Database::with_pool(pool));
 
