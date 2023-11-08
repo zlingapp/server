@@ -1,9 +1,8 @@
 use utoipa::OpenApi;
 
-pub mod consumer;
-pub mod consumer_manager;
-pub mod consumer_map;
 pub mod events;
+pub mod pubsub;
+pub mod pubsub_map;
 pub mod topic;
 
 #[derive(OpenApi)]

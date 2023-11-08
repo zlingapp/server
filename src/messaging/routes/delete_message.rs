@@ -10,7 +10,7 @@ use crate::{
     auth::access_token::AccessToken,
     db::DB,
     error::{macros::err, HResult},
-    realtime::pubsub::consumer_manager::EventConsumerManager,
+    realtime::pubsub::pubsub::PubSub,
 };
 
 #[derive(Deserialize, IntoParams)]
@@ -38,7 +38,7 @@ pub async fn delete_message(
     db: DB,
     token: AccessToken,
     path: Path<DeleteMessagePath>,
-    ecm: Data<EventConsumerManager>,
+    pubsub: Data<PubSub>,
 ) -> HResult<HttpResponse> {
     if let Ok(message) = db
         .get_message(&path.guild_id, &path.channel_id, &path.message_id)
@@ -73,7 +73,8 @@ pub async fn delete_message(
             .await?;
 
         // tell clients that the message got deleted
-        ecm.notify_message_deleted(&path.channel_id, &message.id)
+        pubsub
+            .notify_message_deleted(&path.channel_id, &message.id)
             .await;
     } else {
         // note: we don't want to return a 404 if the message doesn't exist, because

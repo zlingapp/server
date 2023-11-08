@@ -19,8 +19,6 @@ Message:
 
  */
 
-use std::sync::Arc;
-
 use actix_web::{
     get,
     web::{Data, Payload, Query},
@@ -31,10 +29,7 @@ use serde::Deserialize;
 use crate::{
     auth::{access_token::AccessToken, token::Token},
     error::IntoHandlerErrorResult,
-    realtime::{
-        pubsub::{consumer::EventConsumer, consumer_manager::EventConsumerManager},
-        socket::Socket,
-    },
+    realtime::{pubsub::pubsub::PubSub, socket::Socket},
 };
 
 use super::topic::Topic;
@@ -110,7 +105,7 @@ pub enum EventSocketRequest {
 )]
 #[get("/events/ws")]
 pub async fn events_ws(
-    ecm: Data<EventConsumerManager>,
+    pubsub: Data<PubSub>,
     req: HttpRequest,
     query: Query<TokenInQuery>,
     body: Payload,
@@ -118,18 +113,17 @@ pub async fn events_ws(
     // get token from query
     let token = query.auth.parse::<Token>().or_err(401)?;
     let token = AccessToken::from_existing(token).or_err(401)?;
+    let id = token.user_id.clone(); // Save for registering consumer
 
     // set up handlers
     let on_message_handler: Box<dyn Fn(String) + Send + Sync + 'static>;
     let on_close_handler;
 
-    let token = Arc::new(token);
-
     // generate random socket id
     let socket_id = nanoid::nanoid!();
 
     {
-        let ecm = ecm.clone();
+        let pubsub = pubsub.clone();
         let socket_id = socket_id.clone();
 
         on_message_handler = Box::new(move |msg: String| {
@@ -138,12 +132,12 @@ pub async fn events_ws(
                 match esr {
                     Subscribe { topics } => {
                         for topic in topics {
-                            ecm.subscribe(&socket_id, topic).unwrap_or(());
+                            pubsub.subscribe(&socket_id, topic).unwrap_or(());
                         }
                     }
                     Unsubscribe { topics } => {
                         for topic in topics {
-                            ecm.unsubscribe(&socket_id, &topic).unwrap_or(());
+                            pubsub.unsubscribe(&socket_id, &topic).unwrap_or(());
                         }
                     }
                 }
@@ -153,9 +147,9 @@ pub async fn events_ws(
 
     {
         let socket_id = socket_id.clone();
-        let ecm = ecm.clone();
+        let pubsub = pubsub.clone();
         on_close_handler = Box::new(move |_| {
-            ecm.remove_consumer(&socket_id);
+            pubsub.remove_socket(&token.user_id, &socket_id);
         });
     }
 
@@ -169,8 +163,7 @@ pub async fn events_ws(
         Some(on_close_handler),
     )?;
 
-    let ec = EventConsumer::new(token.user_id.clone(), socket);
-    ecm.add_consumer(ec);
+    pubsub.add_socket(id, socket);
 
     Ok(response)
 }

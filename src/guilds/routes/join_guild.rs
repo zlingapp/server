@@ -8,7 +8,7 @@ use actix_web::{
 
 use crate::{
     auth::access_token::AccessToken, db::DB, guilds::routes::GuildPath,
-    realtime::pubsub::consumer_manager::EventConsumerManager,
+    realtime::pubsub::pubsub::PubSub,
 };
 use crate::{
     error::{macros::err, HResult},
@@ -41,7 +41,7 @@ pub async fn join_guild(
     db: DB,
     token: AccessToken,
     req: GuildPath,
-    ecm: Data<EventConsumerManager>,
+    pubsub: Data<PubSub>,
 ) -> HResult<impl Responder> {
     let rows_affected = sqlx::query!(
         r#"
@@ -61,7 +61,7 @@ pub async fn join_guild(
     if rows_affected == 0 {
         err!()?;
     }
-    ecm.notify_guild_member_list_update(&req.guild_id).await;
+    pubsub.notify_guild_member_list_update(&req.guild_id).await;
 
     // again, this is temporarily here so the browser redirects back to /
     Ok(Redirect::to("/").see_other())

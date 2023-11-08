@@ -6,12 +6,17 @@ use sqlx::{Pool, Postgres};
 
 use crate::auth::user::{PublicUserInfo, User};
 use crate::crypto;
+use crate::friends::friend_request::{FriendRequest, FriendRequestType};
 use crate::messaging::message::Message;
 
 pub type DB = Data<Database>;
 
 pub struct Database {
     pub pool: Pool<Postgres>,
+}
+
+pub struct Friends {
+    pub friends: Vec<String>,
 }
 
 impl Database {
@@ -204,5 +209,85 @@ impl Database {
         // TODO: implement, for now let's let people delete each other's
         // messages, freely, wild west style!
         return Ok(true);
+    }
+
+    pub async fn is_user_friend(&self, me_id: &str, friend_id: &str) -> Result<bool, sqlx::Error> {
+        sqlx::query_as!(
+            Friends,
+            r#"SELECT friends 
+                FROM users 
+                WHERE id = $1"#,
+            me_id
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map(|e| e.friends.contains(&friend_id.to_string()))
+    }
+
+    pub async fn list_incoming_friend_requests(
+        &self,
+        id: &str,
+    ) -> Result<Vec<FriendRequest>, sqlx::Error> {
+        sqlx::query_as!(
+            PublicUserInfo,
+            r#"SELECT id, name AS "username", avatar 
+               FROM friend_requests, users
+               WHERE from_user = id AND to_user = $1"#,
+            id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map(|r| {
+            r.into_iter()
+                .map(|i| FriendRequest {
+                    direction: FriendRequestType::Incoming,
+                    user: i,
+                })
+                .collect::<Vec<FriendRequest>>()
+        })
+    }
+    pub async fn list_outgoing_friend_requests(
+        &self,
+        id: &str,
+    ) -> Result<Vec<FriendRequest>, sqlx::Error> {
+        sqlx::query_as!(
+            PublicUserInfo,
+            r#"SELECT id,name as "username",avatar 
+                FROM friend_requests, users
+                WHERE to_user = id AND from_user = $1"#,
+            id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map(|r| {
+            r.into_iter()
+                .map(|i| FriendRequest {
+                    direction: FriendRequestType::Outgoing,
+                    user: i,
+                })
+                .collect::<Vec<FriendRequest>>()
+        })
+    }
+    pub async fn add_friends(&self, id1: &str, id2: &str) -> Result<(), sqlx::Error> {
+        // This can create duplicate friends, be careful
+        sqlx::query!(
+            r#"UPDATE users
+                SET friends = ARRAY_APPEND(friends,$1)
+                WHERE id=$2"#,
+            id1,
+            id2
+        )
+        .execute(&self.pool)
+        .await?;
+        sqlx::query!(
+            r#"UPDATE users
+                SET friends = ARRAY_APPEND(friends,$1)
+                WHERE id=$2"#,
+            id2,
+            id1
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 }

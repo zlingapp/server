@@ -5,17 +5,17 @@ use serde_json::json;
 use crate::{
     auth::user::{PublicUserInfo, User},
     messaging::message::Message,
+    realtime::socket::Socket,
 };
 
 use super::{
-    consumer::EventConsumer,
-    consumer_map::ConsumerMap,
+    pubsub_map::PubSubMap,
     topic::{Topic, TopicType},
 };
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
-pub struct EventConsumerManager {
-    consumers: RwLock<ConsumerMap>,
+pub struct PubSub {
+    map: RwLock<PubSubMap>,
 }
 
 #[derive(Serialize)]
@@ -31,23 +31,37 @@ pub enum Event<'l> {
     DeleteMessage { id: &'l str },
     /// A user started typing in a channel.
     Typing { user: &'l PublicUserInfo },
+
+    /// Some sort of update to a friend request. Clients should keep track of these
+    /// Options
+    /// - Someone sent you a friend request
+    /// - Someone accepted your friend request
+    FriendRequestUpdate { user: &'l PublicUserInfo },
+    /// A friend request has been deleted. Clients should keep track of theses
+    /// Options
+    /// - Someone denied your friend request
+    /// - Someone cancelled a friend request they sent to your
+    FriendRequestRemove { user: &'l PublicUserInfo },
+    /// Someone severed all ties with you
+    FriendRemove { user: &'l PublicUserInfo },
 }
 
-impl EventConsumerManager {
+impl PubSub {
     pub fn new() -> Self {
         Self {
-            consumers: RwLock::new(ConsumerMap::new()),
+            map: RwLock::new(PubSubMap::new()),
         }
     }
 
     pub async fn broadcast(&self, topic: &Topic, event: Event<'_>) {
-        let consumers = self.consumers.read().unwrap();
-        if let Some(consumers) = consumers.topic_to_cons.get(topic) {
-            let mut futures = Vec::with_capacity(consumers.len());
+        let map = self.map.read().unwrap();
 
-            for consumer in consumers {
+        if let Some(subscribed_sockets) = map.topic_to_sockets.get(topic) {
+            let mut futures = Vec::with_capacity(subscribed_sockets.len());
+
+            for socket in subscribed_sockets {
                 futures.push(
-                    consumer.socket.send(
+                    socket.send(
                         json!({
                             "topic": topic,
                             "event": event,
@@ -60,27 +74,43 @@ impl EventConsumerManager {
             join_all(futures).await;
         }
     }
-}
+    pub async fn send_to(&self, user_id: &str, event: Event<'_>) {
+        let map = self.map.read().unwrap();
 
-// re-export ConsumerMap methods
-impl EventConsumerManager {
-    pub fn add_consumer(&self, consumer: EventConsumer) {
-        self.consumers.write().unwrap().add_consumer(consumer);
+        if let Some(user_sockets) = map.user_id_to_sockets.get(user_id) {
+            let mut futures = Vec::with_capacity(user_sockets.len());
+
+            for socket in user_sockets {
+                futures.push(
+                    socket.send(
+                        json!({
+                            "topic": Topic::new(TopicType::User, user_id.into()),
+                            "event": event
+                        })
+                        .to_string(),
+                    ),
+                )
+            }
+
+            join_all(futures).await;
+        }
     }
 
-    pub fn remove_consumer(&self, socket_id: &str) {
-        self.consumers.write().unwrap().remove_consumer(socket_id);
+    // re-export PubSubMap methods
+    pub fn add_socket(&self, user_id: String, socket: Arc<Socket>) {
+        self.map.write().unwrap().add_socket(user_id, socket);
+    }
+
+    pub fn remove_socket(&self, user_id: &str, socket_id: &str) {
+        self.map.write().unwrap().remove_socket(user_id, socket_id);
     }
 
     pub fn subscribe(&self, socket_id: &str, topic: Topic) -> Result<(), ()> {
-        self.consumers.write().unwrap().subscribe(socket_id, topic)
+        self.map.write().unwrap().subscribe(socket_id, topic)
     }
 
     pub fn unsubscribe(&self, socket_id: &str, topic: &Topic) -> Result<(), ()> {
-        self.consumers
-            .write()
-            .unwrap()
-            .unsubscribe(socket_id, topic)
+        self.map.write().unwrap().unsubscribe(socket_id, topic)
     }
 
     pub async fn notify_of_new_message(&self, channel_id: &str, message: &Message) {

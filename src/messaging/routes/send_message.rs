@@ -10,12 +10,12 @@ use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    auth::user::{PublicUserInfo, UserEx},
+    auth::user::User,
     db::DB,
     error::{macros::err, HResult},
     media::routes::upload::UploadedFileInfo,
     messaging::message::Message,
-    realtime::pubsub::consumer_manager::EventConsumerManager,
+    realtime::pubsub::pubsub::PubSub,
 };
 
 #[derive(Deserialize, ToSchema)]
@@ -55,10 +55,10 @@ struct SendMessagePath {
 #[post("/guilds/{guild_id}/channels/{channel_id}/messages")]
 async fn send_message(
     db: DB,
-    user: UserEx,
+    user: User,
     req: Json<SendMessageRequest>,
     path: Path<SendMessagePath>,
-    ecm: Data<EventConsumerManager>,
+    pubsub: Data<PubSub>,
 ) -> HResult<Json<SendMessageResponse>> {
     // get inner value
     let req = req.0;
@@ -124,16 +124,14 @@ async fn send_message(
         } else {
             req.attachments
         },
-        author: PublicUserInfo {
-            id: user.0.id,
-            username: user.0.name,
-            avatar: user.0.avatar,
-        },
+        author: user.into(),
         created_at: DateTime::<Utc>::from_naive_utc_and_offset(record.created_at, Utc),
     };
 
     // tell people listening to this channel that there's a new message
-    ecm.notify_of_new_message(&path.channel_id, &message).await;
+    pubsub
+        .notify_of_new_message(&path.channel_id, &message)
+        .await;
 
     Ok(Json(SendMessageResponse {
         id: message.id,

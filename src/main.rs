@@ -14,9 +14,7 @@ use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use voice::{VoiceChannels, VoiceClients};
 
-use crate::{
-    db::DB, realtime::pubsub::consumer_manager::EventConsumerManager, voice::pool::VoiceWorkerPool,
-};
+use crate::{db::DB, realtime::pubsub::pubsub::PubSub, voice::pool::VoiceWorkerPool};
 
 mod apidocs;
 mod auth;
@@ -25,6 +23,7 @@ mod channels;
 mod crypto;
 mod db;
 mod error;
+mod friends;
 mod guilds;
 mod media;
 mod messaging;
@@ -87,7 +86,7 @@ async fn main() -> std::io::Result<()> {
     let voice_channels: Data<VoiceChannels> = Data::new(Mutex::new(HashMap::new()));
 
     // pubsub
-    let event_manager = Data::new(EventConsumerManager::new());
+    let event_manager = Data::new(PubSub::new());
 
     let mut server = HttpServer::new(move || {
         let oapi = apidocs::setup_oapi();
@@ -126,6 +125,8 @@ async fn main() -> std::io::Result<()> {
             .configure(settings::routes::configure_app)
             // bots
             .configure(bot::routes::configure_app)
+            // friends
+            .configure(friends::routes::configure_app)
             .default_service(web::route().to(api_endpoint_not_found))
             // OpenAPI docs
             .service(

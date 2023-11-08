@@ -48,7 +48,7 @@ pub async fn list_vc_peers(client: VoiceClientEx) -> Json<Vec<ChannelMemberInfo>
             .map(|c| ChannelMemberInfo {
                 identity: c.identity.clone(),
                 producers: c.producers.lock().unwrap().keys().cloned().collect(),
-                user: PublicUserInfo::from(c.user.clone()),
+                user: c.user.clone().into(),
             })
             .collect();
     }
