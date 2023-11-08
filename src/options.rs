@@ -73,7 +73,7 @@ lazy_static! {
 
     static ref INITIAL_AVAILABLE_OUTGOING_BITRATE: u32 = var("WRTC_INITIAL_AVAILABLE_OUTGOING_BITRATE", "600000");
 
-    static ref DB_HOST: String = var("DB_HOST", "localhost");
+    static ref DB_HOST: String = var("DB_HOST", "127.0.0.1");
     static ref DB_PORT: u16 = var("DB_PORT", "5432");
     static ref DB_USER: String = var("DB_USER", "zling-backend");
     static ref DB_PASSWORD: String = var("DB_PASSWORD", "dev");

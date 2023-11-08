@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 SCRIPT_DIR=$( cd -- "$( dirname -- "$0" )" &> /dev/null && pwd )
 
-success () {
+success() {
     echo "Development DB ready to use."
     echo
     echo "   Update the database schema by running:"
@@ -18,41 +18,43 @@ success () {
     exit 0
 }
 
-# check if docker is installed
-if ! command -v docker &> /dev/null
-then
-    echo "error: docker not found, you need to install docker"
-    echo "see: https://docs.docker.com/get-docker/"
-    exit 1
-fi
+post_container_setup() {
+    if [ -z "$SKIP_MIGRATIONS" ] || [ "$SKIP_MIGRATIONS" = 0 ]; then
+        echo "Checking and applying any pending migrations..."
+        cargo sqlx migrate run
 
-# check if cargo is installed
-if ! command -v cargo &> /dev/null
-then
-    echo "error: cargo not found, you need to install rust"
-    echo "see: https://www.rust-lang.org/tools/install"
-    exit 1
-fi
-
-# check if sqlx is installed in ~/.cargo/bin/sqlx
-if [ ! -f ~/.cargo/bin/sqlx ]
-then
-    echo "error: sqlx-cli not found in ~/.cargo/bin/sqlx (needed to run migrations)"
-
-    # prompt user whether to install sqlx
-    read -p "Install sqlx-cli with cargo install? [y/n]: " -n 1 -r REPLY
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]
-    then
-        echo
-        echo "error: please install sqlx-cli in some way before running this script"
-        echo "see: https://github.com/launchbadge/sqlx/tree/main/sqlx-cli#install"
-        exit 1
+        if [ $? -eq 0 ]; then
+            success
+        else
+            echo "error: Failed to apply migrations!"
+            exit 1
+        fi
     fi
 
-    echo "[$] cargo install sqlx-cli --no-default-features --features native-tls,postgres"
-    # do the install
-    cargo install sqlx-cli --no-default-features --features native-tls,postgres
+    success
+}
+
+if ([ -z "$SKIP_MIGRATIONS" ] || [ "$SKIP_MIGRATIONS" = 0 ]) && ([ -z "$SKIP_TOOL_CHECKS" ] || [ "$SKIP_TOOL_CHECKS" = 0 ]) ; then
+    # check if sqlx is installed in ~/.cargo/bin/sqlx
+    if [ ! -f ~/.cargo/bin/sqlx ]; then
+        echo "error: sqlx-cli not found in ~/.cargo/bin/sqlx (needed to run migrations)"
+
+        # prompt user whether to install sqlx
+        printf "Install sqlx-cli with cargo install? [y/n]: "
+        read answer
+        echo
+        if [ "$answer" = "${answer#[Yy]}" ]; then
+            # user said no (yes the above if statement is weird but trust me
+            # it's not a typo)
+            echo "error: please install sqlx-cli in some way before running this script"
+            echo "see: https://github.com/launchbadge/sqlx/tree/main/sqlx-cli#install"
+            exit 1
+        fi
+
+        echo "[$] cargo install sqlx-cli --no-default-features --features native-tls,postgres"
+        # do the install
+        cargo install sqlx-cli --no-default-features --features native-tls,postgres
+    fi
 fi
 
 
@@ -60,9 +62,7 @@ fi
 if [ "$(docker ps -aq -f name=zling-db)" ]; then
     # check if container is running
     if [ "$(docker ps -aq -f status=running -f name=zling-db)" ]; then
-        echo "Checking and applying any pending migrations..."
-        cargo sqlx migrate run
-        success
+        post_container_setup
     fi
 
     echo "Starting container..."
@@ -72,20 +72,15 @@ if [ "$(docker ps -aq -f name=zling-db)" ]; then
 
     # ensure exit code is 0
     if [ $? -eq 0 ]; then
-        echo "Checking and applying any pending migrations..."
-        cargo sqlx migrate run
+        post_container_setup
     else
         echo "error: Failed to start container!"
         exit 1
-    fi    
-    
-    success
+    fi
 fi
 
 echo "Creating database container..."
 docker run -d -e POSTGRES_USER=zling-backend -e POSTGRES_PASSWORD=dev -p 127.0.0.1:5432:5432 --name zling-db postgres || exit 1
 echo "Waiting 3 seconds for the DB to start..."
 sleep 3
-echo "Applying migrations..."
-cargo sqlx migrate run
-success
+post_container_setup
