@@ -35,7 +35,6 @@ pub struct SendMessageResponse {
 
 #[derive(Deserialize, IntoParams)]
 struct SendMessagePath {
-    guild_id: String,
     channel_id: String,
 }
 
@@ -52,7 +51,7 @@ struct SendMessagePath {
         (status = BAD_REQUEST, description = "Invalid message (content_too_long, missing_content)")
     )
 )]
-#[post("/guilds/{guild_id}/channels/{channel_id}/messages")]
+#[post("/channels/{channel_id}/messages")]
 async fn send_message(
     db: DB,
     user: User,
@@ -81,7 +80,7 @@ async fn send_message(
 
     // permission check here
     let can_send = db
-        .can_user_send_message_in(&user.id, &path.guild_id, &path.channel_id)
+        .can_user_send_message_in(&user.id, &path.channel_id)
         .await
         .unwrap();
 
@@ -99,15 +98,23 @@ async fn send_message(
         r#"
         WITH message AS (
             INSERT INTO messages 
-            (id, guild_id, channel_id, user_id, content, attachments) 
-            VALUES ($1, $2, $3, $4, $5, $6) 
-            RETURNING messages.id, messages.created_at
+                (id, channel_id, user_id, content, attachments) 
+            VALUES 
+                ($1, $2, $3, $4, $5) 
+            RETURNING 
+                id, created_at
         ) 
-        SELECT message.id, message.created_at, members.nickname AS "author_nickname" FROM message 
-        LEFT JOIN members ON members.guild_id = $2 AND members.user_id = $4 
+        SELECT 
+            message.id, 
+            message.created_at, 
+            members.nickname AS "author_nickname" 
+        FROM message, members, channels
+        WHERE 
+            channels.id = $2 
+            AND members.user_id = $3 
+            AND channels.guild_id = members.guild_id;
         "#,
         nanoid!(),
-        path.guild_id,
         path.channel_id,
         user.id,
         req.content,

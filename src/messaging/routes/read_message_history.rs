@@ -26,7 +26,6 @@ pub struct MessageHistoryQuery {
 
 #[derive(Deserialize, IntoParams)]
 struct ReadHistoryPath {
-    guild_id: String,
     channel_id: String,
 }
 
@@ -47,7 +46,7 @@ const MAX_MESSAGE_LIMIT: i64 = 50;
         (status = BAD_REQUEST, description = "Invalid message limit")
     )
 )]
-#[get("/guilds/{guild_id}/channels/{channel_id}/messages")]
+#[get("/channels/{channel_id}/messages")]
 async fn read_message_history(
     db: DB,
     token: AccessToken,
@@ -55,7 +54,7 @@ async fn read_message_history(
     req: Query<MessageHistoryQuery>,
 ) -> HResult<HttpResponse> {
     let can_read = db
-        .can_user_read_message_history_from(&token.user_id, &path.guild_id, &path.channel_id)
+        .can_user_read_message_history_from(&token.user_id, &path.channel_id)
         .await?;
 
     if !can_read {
@@ -89,8 +88,7 @@ async fn read_message_history(
         FROM messages, members, users 
         WHERE (
             messages.channel_id = $1 
-            AND messages.user_id = members.user_id 
-            AND messages.guild_id = members.guild_id
+            AND messages.user_id = members.user_id
             AND members.user_id = users.id
             AND messages.created_at < $3
             AND messages.created_at > $4

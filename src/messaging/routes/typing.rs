@@ -15,7 +15,6 @@ use crate::{
 
 #[derive(Deserialize, IntoParams)]
 pub struct TypingPath {
-    guild_id: String,
     channel_id: String,
 }
 
@@ -32,7 +31,7 @@ pub struct TypingPath {
         (status = FORBIDDEN, description = "No permission to type messages in channel"),
     )
 )]
-#[post("/guilds/{guild_id}/channels/{channel_id}/typing")]
+#[post("/channels/{channel_id}/typing")]
 pub async fn typing(
     db: DB,
     path: Path<TypingPath>,
@@ -40,7 +39,7 @@ pub async fn typing(
     pubsub: Data<PubSub>,
 ) -> HResult<HttpResponse> {
     if !db
-        .can_user_send_message_in(&user.id, &path.guild_id, &path.channel_id)
+        .can_user_send_message_in(&user.id, &path.channel_id)
         .await?
     {
         return err!(403);
