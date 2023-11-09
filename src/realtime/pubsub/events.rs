@@ -81,7 +81,7 @@ pub enum EventSocketRequest {
 ///         "createdAt": "2023-08-29T17:29:22.343533Z",
 ///         "content": "test",
 ///         "author": {
-///             "avatar": "/api/media/QoJXQnwJY1CfQj2L0H9gH/avatar.png",
+///             "avatar": "/media/QoJXQnwJY1CfQj2L0H9gH/avatar.png",
 ///             "id": "kEBbg9_IZXajYRevn7cUS",
 ///             "username": "someone#1234"
 ///         },

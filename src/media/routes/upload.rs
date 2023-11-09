@@ -25,7 +25,7 @@ pub struct UploadedFileInfo {
     pub id: String,
     #[schema(example = "cat.jpg")]
     pub name: String,
-    #[schema(example = "/api/media/s6NIiu2oOh1FEL0Xfjc7n/cat.jpg")]
+    #[schema(example = "/media/s6NIiu2oOh1FEL0Xfjc7n/cat.jpg")]
     pub url: String,
     pub r#type: UploadedFileType,
 }
