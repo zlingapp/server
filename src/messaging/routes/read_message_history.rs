@@ -83,13 +83,11 @@ async fn read_message_history(
             messages.attachments,
             users.name AS "author_username",
             users.avatar AS "author_avatar",
-            users.id AS "author_id",
-            members.nickname AS "author_nickname"
-        FROM messages, members, users 
+            users.id AS "author_id"
+        FROM messages, users 
         WHERE (
             messages.channel_id = $1 
-            AND messages.user_id = members.user_id
-            AND members.user_id = users.id
+            AND users.id = messages.user_id
             AND messages.created_at < $3
             AND messages.created_at > $4
         )
