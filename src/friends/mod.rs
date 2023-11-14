@@ -1,2 +1,4 @@
+pub mod dmchannel;
 pub mod friend_request;
-pub mod routes;
+pub mod management;
+pub mod messaging;

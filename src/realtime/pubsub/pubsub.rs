@@ -121,6 +121,9 @@ impl PubSub {
         )
         .await;
     }
+    pub async fn notify_user_of_new_message(&self, user_id: &str, message: &Message) {
+        self.send_to(user_id, Event::Message(message)).await;
+    }
 
     pub async fn notify_guild_channel_list_update(&self, guild_id: &str) {
         self.broadcast(
