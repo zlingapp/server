@@ -32,4 +32,4 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
         FriendRequestType
     ))
 )]
-pub struct FriendsApiDoc;
+pub struct FriendsManagementApiDoc;
