@@ -14,7 +14,7 @@ use regex::Regex;
 
 lazy_static! {
     static ref RESOURCE_REGEX: Regex =
-        Regex::new(r"^/api/media/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$").unwrap();
+        Regex::new(r"^/media/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$").unwrap();
 }
 
 /// Ensures that a resource url is from the zling media api.

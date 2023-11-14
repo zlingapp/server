@@ -15,7 +15,6 @@ use crate::{
 
 #[derive(Deserialize, IntoParams)]
 pub struct DeleteMessagePath {
-    guild_id: String,
     channel_id: String,
     message_id: String,
 }
@@ -33,7 +32,7 @@ pub struct DeleteMessagePath {
         (status = FORBIDDEN, description = "No permission to delete message")
     )
 )]
-#[delete("/guilds/{guild_id}/channels/{channel_id}/messages/{message_id}")]
+#[delete("/channels/{channel_id}/messages/{message_id}")]
 pub async fn delete_message(
     db: DB,
     token: AccessToken,
@@ -41,7 +40,7 @@ pub async fn delete_message(
     pubsub: Data<PubSub>,
 ) -> HResult<HttpResponse> {
     if let Ok(message) = db
-        .get_message(&path.guild_id, &path.channel_id, &path.message_id)
+        .get_message(&path.channel_id, &path.message_id)
         .await
     {
         // check if this user can view this message
@@ -50,7 +49,7 @@ pub async fn delete_message(
         // since it's a rare, niche case (basically, no one will notice or care)
 
         if !db
-            .can_user_view_messages_in(&token.user_id, &path.guild_id, &path.channel_id)
+            .can_user_view_messages_in(&token.user_id, &path.channel_id)
             .await?
         {
             err!(403)?;
@@ -60,7 +59,7 @@ pub async fn delete_message(
         if message.author.id != token.user_id {
             // otherwise, check if the user has permission to delete messages
             if !db
-                .can_user_manage_messages(&token.user_id, &path.guild_id, &path.channel_id)
+                .can_user_manage_messages(&token.user_id, &path.channel_id)
                 .await?
             {
                 err!(403)?;

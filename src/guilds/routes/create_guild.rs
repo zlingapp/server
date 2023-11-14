@@ -15,7 +15,7 @@ use crate::{
 pub struct CreateGuildRequest {
     #[schema(example = "My Cool Server")]
     name: String,
-    #[schema(example = "/api/media/s6NIiu2oOh1FEL0Xfjc7n/cat.jpg")]
+    #[schema(example = "/media/s6NIiu2oOh1FEL0Xfjc7n/cat.jpg")]
     icon: Option<String>,
 }
 

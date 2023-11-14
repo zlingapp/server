@@ -82,7 +82,6 @@ impl Database {
     pub async fn can_user_see_channel(
         &self,
         user_id: &str,
-        guild_id: &str,
         channel_id: &str,
     ) -> Result<bool, sqlx::Error> {
         let result = sqlx::query!(
@@ -93,14 +92,12 @@ impl Database {
                     WHERE (
                         channels.id = $1        AND 
                         members.user_id = $2    AND
-                        channels.guild_id = $3  AND
-                        members.guild_id = $3
+                        members.guild_id = channels.guild_id
                     )
             ) AS can_user_see_channel
             ",
             channel_id,
-            user_id,
-            guild_id
+            user_id
         )
         .fetch_one(&self.pool)
         .await?
@@ -113,23 +110,22 @@ impl Database {
     pub async fn can_user_send_message_in(
         &self,
         user_id: &str,
-        guild_id: &str,
         channel_id: &str,
     ) -> Result<bool, sqlx::Error> {
         return self
-            .can_user_see_channel(user_id, guild_id, channel_id)
+            .can_user_see_channel(user_id, channel_id)
             .await;
     }
 
     pub async fn can_user_read_message_history_from(
         &self,
         user_id: &str,
-        guild_id: &str,
         channel_id: &str,
     ) -> Result<bool, sqlx::Error> {
         return self
-            .can_user_see_channel(user_id, guild_id, channel_id)
+            .can_user_see_channel(user_id, channel_id)
             .await;
+        // TODO cumulatively check all parent channels
     }
 
     /// this is different to message history! this is the ability to read messages
@@ -138,17 +134,15 @@ impl Database {
     pub async fn can_user_view_messages_in(
         &self,
         user_id: &str,
-        guild_id: &str,
         channel_id: &str,
     ) -> Result<bool, sqlx::Error> {
         return self
-            .can_user_see_channel(user_id, guild_id, channel_id)
+            .can_user_see_channel(user_id, channel_id)
             .await;
     }
 
     pub async fn get_message(
         &self,
-        guild_id: &str,
         channel_id: &str,
         message_id: &str,
     ) -> Result<Message, sqlx::Error> {
@@ -166,14 +160,11 @@ impl Database {
             WHERE (
                 messages.id = $1 
                 AND messages.channel_id = $2
-                AND messages.guild_id = $3
-                AND messages.user_id = users.id
-                AND messages.user_id = members.user_id 
-                AND messages.guild_id = members.guild_id
+                AND users.id = messages.user_id
+                AND members.user_id = messages.user_id
             )"#,
             message_id,
             channel_id,
-            guild_id
         )
         .fetch_one(&self.pool)
         .map_ok(|record| {
@@ -203,7 +194,6 @@ impl Database {
     pub async fn can_user_manage_messages(
         &self,
         user_id: &str,
-        guild_id: &str,
         channel_id: &str,
     ) -> Result<bool, sqlx::Error> {
         // TODO: implement, for now let's let people delete each other's
