@@ -30,6 +30,9 @@ pub async fn remove_friend(
     path: UserIdPath,
     token: AccessToken,
 ) -> HResult<Json<String>> {
+    if path.user_id == token.user_id {
+        return err!(400, "You cannot remove yourself as a friend");
+    }
     if !db.is_user_friend(&token.user_id, &path.user_id).await? {
         return err!(400, "You are not friends with that user");
     }
