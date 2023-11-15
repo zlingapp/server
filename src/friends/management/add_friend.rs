@@ -33,6 +33,9 @@ pub async fn add_friend(
     me: User,
     path: UserIdPath,
 ) -> HResult<Json<String>> {
+    if me.id == path.user_id {
+        err!(400, "You cannot add yourself as a friend")?;
+    }
     if db.is_user_friend(&me.id, &path.user_id).await? {
         err!(400, "You are already friends with that user")?;
     }
