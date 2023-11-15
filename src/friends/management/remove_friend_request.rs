@@ -32,6 +32,9 @@ pub async fn remove_friend_request(
     me: User,
     path: UserIdPath,
 ) -> HResult<Json<String>> {
+    if me.id == path.user_id {
+        err!(400, "You cannot remove a friend request to yourself")?;
+    }
     let incoming = db.list_incoming_friend_requests(&me.id).await?;
     if incoming.iter().any(|i| i.user.id == path.user_id) {
         // We want to deny the incoming request
