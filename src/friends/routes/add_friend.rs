@@ -2,7 +2,7 @@ use actix_web::{
     post,
     web::{Data, Json},
 };
-
+use sqlx::query;
 use crate::{
     auth::user::User,
     db::DB,
@@ -43,6 +43,16 @@ pub async fn add_friend(
     if incoming.iter().any(|i| i.user.id == path.user_id) {
         // We have an incoming friend request, add friends now
         db.add_friends(&path.user_id, &me.id).await?;
+
+        query!(
+            r#"DELETE FROM friend_requests
+            WHERE from_user=$1
+            AND to_user=$2"#,
+            &path.user_id,
+            &me.id
+        )
+        .execute(&db.pool)
+        .await?;
 
         // Notify the other party that their request has been accepted
 
