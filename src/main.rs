@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, sync::Mutex};
+use std::{collections::HashMap, env,sync::Mutex};
 
 use actix_cors::Cors;
 use actix_web::{
@@ -93,7 +93,7 @@ async fn main() -> std::io::Result<()> {
     // voice chat related
     let worker_manager = WorkerManager::new();
     let voice_ports = options::voice_ports();
-    let voice_worker_pool = Data::new(Mutex::new(VoiceWorkerPool::new(
+    let voice_worker_pool = Data::new(tokio::sync::Mutex::new(VoiceWorkerPool::new(
         worker_manager,
         voice_ports,
     )));

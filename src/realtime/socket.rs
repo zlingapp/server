@@ -190,12 +190,11 @@ impl Drop for Socket {
             // we connected successfully, so stop the watchdog now
             watchdog.abort();
         }
+
         actix_rt::Runtime::new().unwrap().block_on(async {
             if let Some(session) = self.session.write().await.take() {
                 // we connected successfully, so close the session now
-                actix_rt::spawn(async move {
-                    session.close(None).await.unwrap_or(());
-                });
+                session.close(None).await.unwrap_or(());
             }
         });
     }
