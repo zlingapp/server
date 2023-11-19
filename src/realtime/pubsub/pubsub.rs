@@ -12,7 +12,8 @@ use super::{
     pubsub_map::PubSubMap,
     topic::{Topic, TopicType},
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub struct PubSub {
     map: RwLock<PubSubMap>,
@@ -54,7 +55,7 @@ impl PubSub {
     }
 
     pub async fn broadcast(&self, topic: &Topic, event: Event<'_>) {
-        let map = self.map.read().unwrap();
+        let map = self.map.read().await;
 
         if let Some(subscribed_sockets) = map.topic_to_sockets.get(topic) {
             let mut futures = Vec::with_capacity(subscribed_sockets.len());
@@ -75,7 +76,7 @@ impl PubSub {
         }
     }
     pub async fn send_to(&self, user_id: &str, event: Event<'_>) {
-        let map = self.map.read().unwrap();
+        let map = self.map.read().await;
 
         if let Some(user_sockets) = map.user_id_to_sockets.get(user_id) {
             let mut futures = Vec::with_capacity(user_sockets.len());
@@ -97,20 +98,20 @@ impl PubSub {
     }
 
     // re-export PubSubMap methods
-    pub fn add_socket(&self, user_id: String, socket: Arc<Socket>) {
-        self.map.write().unwrap().add_socket(user_id, socket);
+    pub async fn add_socket(&self, user_id: String, socket: Arc<Socket>) {
+        self.map.write().await.add_socket(user_id, socket);
     }
 
-    pub fn remove_socket(&self, user_id: &str, socket_id: &str) {
-        self.map.write().unwrap().remove_socket(user_id, socket_id);
+    pub async fn remove_socket(&self, user_id: &str, socket_id: &str) {
+        self.map.write().await.remove_socket(user_id, socket_id);
     }
 
-    pub fn subscribe(&self, socket_id: &str, topic: Topic) -> Result<(), ()> {
-        self.map.write().unwrap().subscribe(socket_id, topic)
+    pub async fn subscribe(&self, socket_id: &str, topic: Topic) -> Result<(), ()> {
+        self.map.write().await.subscribe(socket_id, topic)
     }
 
-    pub fn unsubscribe(&self, socket_id: &str, topic: &Topic) -> Result<(), ()> {
-        self.map.write().unwrap().unsubscribe(socket_id, topic)
+    pub async fn unsubscribe(&self, socket_id: &str, topic: Topic) -> Result<(), ()> {
+        self.map.write().await.unsubscribe(socket_id, &topic)
     }
 
     pub async fn notify_of_new_message(&self, channel_id: &str, message: &Message) {

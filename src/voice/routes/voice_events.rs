@@ -93,7 +93,7 @@ pub async fn voice_events_ws(
     req: HttpRequest,
     body: Payload,
 ) -> Result<HttpResponse, Error> {
-    if client.socket.read().unwrap().is_some() {
+    if client.socket.read().await.is_some() {
         err!(400, "Already connected to a voice event socket.")?;
     }
 
@@ -171,7 +171,7 @@ pub async fn voice_events_ws(
         client.identity, client.channel.id
     );
 
-    *client.socket.write().unwrap() = Some(socket);
+    *client.socket.write().await = Some(socket);
     client.channel.notify_client_joined(&client).await;
 
     Ok(response)
@@ -186,7 +186,7 @@ impl VoiceClient {
     }
 
     pub async fn send(&self, msg: String) -> Result<(), SendFailureReason> {
-        match self.socket.read().unwrap().as_ref() {
+        match self.socket.read().await.as_ref() {
             Some(socket) => socket.send(msg).await,
             None => Err(SendFailureReason::NoSession),
         }
@@ -195,7 +195,7 @@ impl VoiceClient {
 
 impl VoiceChannel {
     pub async fn send_to_all_except(&self, except: &VoiceClient, msg: String) {
-        let clients = self.clients.lock().unwrap();
+        let clients = self.clients.lock().await;
         for client in clients.iter() {
             if client.identity == except.identity {
                 continue;

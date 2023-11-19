@@ -1,7 +1,8 @@
 use std::{
     num::NonZeroU16,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
+use tokio::sync::Mutex;
 
 use crate::{
     options,
@@ -30,7 +31,7 @@ pub struct VoiceChannel {
 impl VoiceChannel {
     pub async fn new_with_id(id: String, vwp: &Mutex<VoiceWorkerPool>) -> Self {
         // TODO: do not unwrap this
-        let (router, webrtc_server) = { vwp.lock().unwrap().allocate_router().await.unwrap() };
+        let (router, webrtc_server) = { vwp.lock().await.allocate_router().await.unwrap() };
 
         let al_observer = router
             .create_audio_level_observer({
@@ -69,7 +70,7 @@ impl VoiceChannel {
         // remove the client from the channel
         self.clients
             .lock()
-            .unwrap()
+            .await
             .retain(|c| c.identity != client_identity);
 
         // remove the client from the global clients map
@@ -87,7 +88,7 @@ impl VoiceChannel {
         }
 
         // if the channel is empty, remove it from the global channels map
-        if self.clients.lock().unwrap().is_empty() {
+        if self.clients.lock().await.is_empty() {
             // at this point the only reference to this channel is the one in the channels map
             // so we can safely remove it from the map
             global_channels.lock().unwrap().remove(&self.id);
@@ -99,7 +100,7 @@ impl VoiceChannel {
             "client[{:?}]: disconnected from {:?}, remaining: {}",
             client_identity,
             self.id,
-            self.clients.lock().unwrap().len()
+            self.clients.lock().await.len()
         );
     }
 

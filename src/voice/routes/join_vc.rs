@@ -1,8 +1,8 @@
 use std::{
-    sync::{Arc, Mutex},
+    sync::Arc,
     time::Duration,
 };
-
+use tokio::sync::Mutex;
 use actix_rt::time::sleep;
 use actix_web::{
     get,
@@ -145,7 +145,7 @@ pub async fn join_vc(
     let client = Arc::new(client);
 
     // add the client to the channel's client list
-    channel.clients.lock().unwrap().push(client.clone());
+    channel.clients.lock().await.push(client.clone());
 
     // create the reply
     let reply = JoinVcReply {
@@ -168,7 +168,7 @@ pub async fn join_vc(
 
             // if the client hasn't connected to the websocket yet, remove it from the channel
 
-            if !match client_inner.socket.read().unwrap().as_ref() {
+            if !match client_inner.socket.read().await.as_ref() {
                 Some(socket) => socket.is_connected().await,
                 None => false,
             } {

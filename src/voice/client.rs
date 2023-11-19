@@ -2,9 +2,9 @@ use std::{
     collections::HashMap,
     ops::Deref,
     pin::Pin,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, Mutex}
 };
-
+use tokio::sync::RwLock;
 use actix_rt::task::JoinHandle;
 use actix_web::{
     web::{Data, Query},
@@ -35,7 +35,7 @@ pub struct VoiceClient {
     pub s2c_transport: RwLock<Option<WebRtcTransport>>,
     pub consumers: MutexMap<Consumer>,
 
-    pub socket: RwLock<Option<Arc<Socket>>>,
+    pub socket: tokio::sync::RwLock<Option<Arc<Socket>>>,
     // this is used to cancel the initial connect watch task
     pub socket_initial_connect_watch_handle: Mutex<Option<JoinHandle<()>>>,
     // the user that this client belongs to
@@ -171,7 +171,7 @@ impl FromRequest for VoiceClientEx {
                 return err!(403)?;
             }
 
-            if !trying_to_connect_to_ws && client.socket.read().unwrap().is_none() {
+            if !trying_to_connect_to_ws && client.socket.read().await.is_none() {
                 return err!(400, "You need to connect to the voice event socket first.")?;
             }
 
