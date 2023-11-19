@@ -65,7 +65,7 @@ pub async fn login(
             access_token,
             refresh_token,
         } => Ok(Json(LoginResponse {
-            user,
+            user: *user,
             access_token,
             refresh_token,
         })),
