@@ -189,12 +189,10 @@ impl Drop for Socket {
             watchdog.abort();
         };
         let s = self.session.get_mut().clone();
-        std::thread::spawn(move || {
-            futures::executor::block_on(async move{
-                if let Some(session) = s {
-                    session.close(None).await.unwrap_or(());
-                }
-            });
+        actix_rt::spawn(async {
+            if let Some(session) = s {
+                session.close(None).await.unwrap_or(());
+            }
         });
     }
 }
