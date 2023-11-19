@@ -1,13 +1,10 @@
-use std::{
-    sync::Arc,
-    time::Duration,
-};
-use tokio::sync::Mutex;
 use actix_rt::time::sleep;
 use actix_web::{
     get,
     web::{Data, Json, Query},
 };
+use std::{sync::Arc, time::Duration};
+use tokio::sync::Mutex;
 
 use log::{info, warn};
 use mediasoup::rtp_parameters::RtpCapabilitiesFinalized;

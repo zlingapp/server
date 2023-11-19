@@ -15,7 +15,6 @@ lazy_static! {
     pub static ref ACCESS_TOKEN_VALIDITY: Duration = Duration::minutes(10);
 }
 
-
 pub enum IssueRefreshTokenResult {
     Failure,
     Success {

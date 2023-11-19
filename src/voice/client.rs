@@ -1,10 +1,3 @@
-use std::{
-    collections::HashMap,
-    ops::Deref,
-    pin::Pin,
-    sync::{Arc, Mutex}
-};
-use tokio::sync::RwLock;
 use actix_rt::task::JoinHandle;
 use actix_web::{
     web::{Data, Query},
@@ -14,6 +7,13 @@ use futures::Future;
 use log::info;
 use mediasoup::{prelude::Consumer, producer::Producer, webrtc_transport::WebRtcTransport};
 use nanoid::nanoid;
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    pin::Pin,
+    sync::{Arc, Mutex},
+};
+use tokio::sync::RwLock;
 
 use crate::{
     auth::{access_token::AccessToken, user::User},

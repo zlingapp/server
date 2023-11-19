@@ -1,7 +1,4 @@
-use std::{
-    num::NonZeroU16,
-    sync::Arc,
-};
+use std::{num::NonZeroU16, sync::Arc};
 use tokio::sync::Mutex;
 
 use crate::{
