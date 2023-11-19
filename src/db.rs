@@ -112,9 +112,7 @@ impl Database {
         user_id: &str,
         channel_id: &str,
     ) -> Result<bool, sqlx::Error> {
-        return self
-            .can_user_see_channel(user_id, channel_id)
-            .await;
+        self.can_user_see_channel(user_id, channel_id).await
     }
 
     pub async fn can_user_read_message_history_from(
@@ -122,9 +120,7 @@ impl Database {
         user_id: &str,
         channel_id: &str,
     ) -> Result<bool, sqlx::Error> {
-        return self
-            .can_user_see_channel(user_id, channel_id)
-            .await;
+        self.can_user_see_channel(user_id, channel_id).await
         // TODO cumulatively check all parent channels
     }
 
@@ -136,9 +132,7 @@ impl Database {
         user_id: &str,
         channel_id: &str,
     ) -> Result<bool, sqlx::Error> {
-        return self
-            .can_user_see_channel(user_id, channel_id)
-            .await;
+        self.can_user_see_channel(user_id, channel_id).await
     }
 
     pub async fn get_message(
@@ -198,7 +192,7 @@ impl Database {
     ) -> Result<bool, sqlx::Error> {
         // TODO: implement, for now let's let people delete each other's
         // messages, freely, wild west style!
-        return Ok(true);
+        Ok(true)
     }
 
     pub async fn is_user_friend(&self, me_id: &str, friend_id: &str) -> Result<bool, sqlx::Error> {

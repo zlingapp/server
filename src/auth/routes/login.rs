@@ -1,5 +1,5 @@
 use actix_web::post;
-use actix_web::{web::Json, HttpRequest, HttpResponse};
+use actix_web::{web::Json, HttpRequest};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -21,7 +21,7 @@ pub struct LoginRequest {
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct LoginResponese {
+pub struct LoginResponse {
     user: User,
     #[serde(serialize_with = "use_display")]
     access_token: AccessToken,
@@ -43,12 +43,13 @@ pub struct LoginResponese {
     tag = "identity"
 )]
 #[post("/auth/login")]
-pub async fn login(db: DB, creds: Json<LoginRequest>, req: HttpRequest) -> HResult<HttpResponse> {
+pub async fn login(
+    db: DB,
+    creds: Json<LoginRequest>,
+    req: HttpRequest,
+) -> HResult<Json<LoginResponse>> {
     let user_agent = match req.headers().get("User-Agent") {
-        Some(user_agent) => match user_agent.to_str() {
-            Ok(user_agent) => user_agent,
-            Err(_) => "Unknown",
-        },
+        Some(user_agent) => user_agent.to_str().unwrap_or("Unknown"),
         None => "Unknown",
     };
 
@@ -63,10 +64,10 @@ pub async fn login(db: DB, creds: Json<LoginRequest>, req: HttpRequest) -> HResu
             user,
             access_token,
             refresh_token,
-        } => Ok(HttpResponse::Ok().json(LoginResponese {
-            user: user,
-            access_token: access_token,
-            refresh_token: refresh_token,
+        } => Ok(Json(LoginResponse {
+            user,
+            access_token,
+            refresh_token,
         })),
     }
 }

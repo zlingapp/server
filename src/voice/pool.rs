@@ -54,7 +54,7 @@ impl VoiceWorkerPool {
         let opts = options::webrtc_server_options(port);
         let server = worker.create_webrtc_server(opts).await.unwrap(); // todo: handle error here possibly
 
-        self.workers.push((worker, server.into()));
+        self.workers.push((worker, server));
 
         let (worker, server) = self.workers.last().unwrap();
         Ok((worker, server.clone()))

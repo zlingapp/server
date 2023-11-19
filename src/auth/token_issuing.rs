@@ -15,6 +15,7 @@ lazy_static! {
     pub static ref ACCESS_TOKEN_VALIDITY: Duration = Duration::minutes(10);
 }
 
+#[allow(clippy::large_enum_variant)] // Doesn't really mater...
 pub enum IssueRefreshTokenResult {
     Failure,
     Success {
@@ -72,7 +73,7 @@ impl Database {
         let refresh_token = self.create_refresh_token(user_id, user_agent, false).await;
         let access_token = AccessToken::new(user_id.to_string());
 
-        return (access_token, refresh_token);
+        (access_token, refresh_token)
     }
 
     pub async fn issue_refresh_token(
@@ -107,15 +108,13 @@ impl Database {
                 let (access_token, refresh_token) =
                     self.create_token_pair(&user.id, user_agent).await;
 
-                return IssueRefreshTokenResult::Success {
+                IssueRefreshTokenResult::Success {
                     user,
                     access_token,
                     refresh_token,
-                };
+                }
             }
-            Err(_) => {
-                return IssueRefreshTokenResult::Failure;
-            }
+            Err(_) => IssueRefreshTokenResult::Failure,
         }
     }
 
@@ -142,9 +141,9 @@ impl Database {
             .create_token_pair(&refresh_token.user_id, user_agent)
             .await;
 
-        return IssueAccessTokenResult::Success {
+        IssueAccessTokenResult::Success {
             access_token,
             refresh_token,
-        };
+        }
     }
 }

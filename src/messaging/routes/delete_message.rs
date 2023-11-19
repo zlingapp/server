@@ -39,10 +39,7 @@ pub async fn delete_message(
     path: Path<DeleteMessagePath>,
     pubsub: Data<PubSub>,
 ) -> HResult<HttpResponse> {
-    if let Ok(message) = db
-        .get_message(&path.channel_id, &path.message_id)
-        .await
-    {
+    if let Ok(message) = db.get_message(&path.channel_id, &path.message_id).await {
         // check if this user can view this message
         // yes this technically allows deleting a message if it's beyond your
         // message history, but we don't really care about that all too much

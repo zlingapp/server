@@ -219,7 +219,7 @@ impl VoiceChannel {
             "user": PublicUserInfo::from(client.user.clone()),
         });
 
-        self.send_to_all_except(&client, event.to_string()).await;
+        self.send_to_all_except(client, event.to_string()).await;
     }
 
     pub async fn notify_client_left(&self, client: &VoiceClient) {
@@ -229,7 +229,7 @@ impl VoiceChannel {
             "identity": client.identity,
         });
 
-        self.send_to_all_except(&client, event.to_string()).await;
+        self.send_to_all_except(client, event.to_string()).await;
     }
 
     pub async fn notify_new_producer(
@@ -246,6 +246,6 @@ impl VoiceChannel {
             "producer_kind": producer_kind,
         });
 
-        self.send_to_all_except(&client, event.to_string()).await;
+        self.send_to_all_except(client, event.to_string()).await;
     }
 }

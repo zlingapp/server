@@ -65,7 +65,7 @@ pub async fn register(db: DB, req: Json<RegisterRequest>) -> HResult<HttpRespons
                 // user already exists
                 err!(409, "That username is already taken.")?;
             }
-            return Ok(HttpResponse::Ok().body("success"));
+            Ok(HttpResponse::Ok().body("success"))
         }
         Err(e) => {
             warn!("Failed to create user: {}", e);

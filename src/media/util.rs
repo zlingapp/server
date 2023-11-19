@@ -76,7 +76,7 @@ pub fn clean_filename(mut original: String) -> Option<String> {
     }
 
     // if we have a valid extension, append it
-    if extension.len() > 0 {
+    if !extension.is_empty() {
         result.push('.');
         result.push_str(extension);
     }
