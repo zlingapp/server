@@ -1,14 +1,13 @@
-use std::{
-    hash::{Hash, Hasher},
-    sync::{Arc, Mutex, RwLock, Weak},
-    time::Duration,
-};
-
 use actix_rt::{task::JoinHandle, time::sleep};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_ws::{Message, MessageStream, Session};
 use futures::StreamExt;
 use lazy_static::lazy_static;
+use std::{
+    hash::{Hash, Hasher},
+    sync::{Arc, Mutex, RwLock, Weak},
+    time::Duration,
+};
 
 pub type Callback<T> = Box<dyn Fn(T) + Send + Sync>;
 
@@ -183,19 +182,19 @@ impl Socket {
         }
     }
 }
-
 impl Drop for Socket {
     fn drop(&mut self) {
         if let Some(watchdog) = self.watchdog_handle.lock().unwrap().take() {
             // we connected successfully, so stop the watchdog now
             watchdog.abort();
-        }
-
-        actix_rt::Runtime::new().unwrap().block_on(async {
-            if let Some(session) = self.session.write().await.take() {
-                // we connected successfully, so close the session now
-                session.close(None).await.unwrap_or(());
-            }
+        };
+        let s = self.session.get_mut().clone();
+        std::thread::spawn(move || {
+            futures::executor::block_on(async move{
+                if let Some(session) = s {
+                    session.close(None).await.unwrap_or(());
+                }
+            });
         });
     }
 }
