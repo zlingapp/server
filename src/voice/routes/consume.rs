@@ -85,7 +85,7 @@ pub async fn handle_consume(
 ) -> ConsumeResponse {
     use ConsumeError::*;
 
-    if client.s2c_transport.read().unwrap().is_none() {
+    if client.s2c_transport.read().await.is_none() {
         return Err(TransportNotCreated);
     }
 
@@ -100,7 +100,7 @@ pub async fn handle_consume(
     let consumer;
 
     {
-        let transport = client.s2c_transport.read().unwrap();
+        let transport = client.s2c_transport.read().await;
         let transport = transport.as_ref().unwrap();
 
         if transport.closed() {

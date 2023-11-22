@@ -75,14 +75,14 @@ pub async fn handle_produce(
     client: VoiceClientEx,
     request: Json<ProduceRequest>,
 ) -> ProduceResponse {
-    if client.c2s_transport.read().unwrap().is_none() {
+    if client.c2s_transport.read().await.is_none() {
         return Err(ProduceError::TransportNotCreated);
     }
 
     let producer;
 
     {
-        let transport = client.c2s_transport.read().unwrap();
+        let transport = client.c2s_transport.read().await;
         let transport = transport.as_ref().unwrap(); // this is a safe unwrap because of the check above
 
         if transport.closed() {

@@ -38,20 +38,26 @@ pub struct ChannelMemberInfo {
 )]
 #[get("/voice/peers")]
 pub async fn list_vc_peers(client: VoiceClientEx) -> Json<Vec<ChannelMemberInfo>> {
-    let reply;
-    {
-        let clients = client.channel.clients.lock().unwrap();
-        reply = clients
-            .iter()
-            .filter(|c| c.socket.read().unwrap().is_some())
-            .filter(|c| c.identity != client.identity)
-            .map(|c| ChannelMemberInfo {
-                identity: c.identity.clone(),
-                producers: c.producers.lock().unwrap().keys().cloned().collect(),
-                user: c.user.clone().into(),
-            })
-            .collect();
+    let clients = client.channel.clients.lock().await;
+    let mut voice_members = Vec::with_capacity(clients.len());
+
+    // look for clients with active sockets
+    for c in clients.iter() {
+        if !c.socket.read().await.is_some() {
+            continue;
+        }
+
+        // do not include information about self
+        if c.identity == client.identity {
+            continue;
+        }
+
+        voice_members.push(ChannelMemberInfo {
+            identity: c.identity.clone(),
+            producers: c.producers.lock().unwrap().keys().cloned().collect(),
+            user: c.user.clone().into(),
+        });
     }
 
-    Json(reply)
+    Json(voice_members)
 }

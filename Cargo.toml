@@ -3,7 +3,7 @@ name = "zling-server"
 version = "0.1.0"
 description = "Zling messenger backend server"
 edition = "2021"
-authors = ["codian"]
+authors = ["codian", "ori"]
 license = "GPL-3.0"
 
 [dependencies]
