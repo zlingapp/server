@@ -91,12 +91,11 @@ async fn main() -> std::io::Result<()> {
     let pool: DB = Data::new(Database::with_pool(pool));
 
     // voice chat related
-    let worker_manager = WorkerManager::new();
-    let voice_ports = options::voice_ports();
-    let voice_worker_pool = Data::new(tokio::sync::Mutex::new(VoiceWorkerPool::new(
-        worker_manager,
-        voice_ports,
-    )));
+    // create a voice worker pool
+    let voice_worker_pool = VoiceWorkerPool::new(WorkerManager::new(), options::voice_ports());
+    // wrap it in Data and tokio Mutex
+    let voice_worker_pool = Data::new(tokio::sync::Mutex::new(voice_worker_pool));
+
     let voice_clients: Data<VoiceClients> = Data::new(Mutex::new(HashMap::new()));
     let voice_channels: Data<VoiceChannels> = Data::new(Mutex::new(HashMap::new()));
 

@@ -38,31 +38,26 @@ pub struct ChannelMemberInfo {
 )]
 #[get("/voice/peers")]
 pub async fn list_vc_peers(client: VoiceClientEx) -> Json<Vec<ChannelMemberInfo>> {
-    let mut reply = Vec::new();
-    {
-        let clients = client.channel.clients.lock().await;
-        // I'll write this as a loop because I don't know how to use higher order functions
-        // With async
-        for c in clients.iter() {
-            if c.socket.read().await.is_some() && c.identity != client.identity {
-                reply.push(ChannelMemberInfo {
-                    identity: c.identity.clone(),
-                    producers: c.producers.lock().unwrap().keys().cloned().collect(),
-                    user: c.user.clone().into(),
-                });
-            }
+    let clients = client.channel.clients.lock().await;
+    let mut voice_members = Vec::with_capacity(clients.len());
+
+    // look for clients with active sockets
+    for c in clients.iter() {
+        if !c.socket.read().await.is_some() {
+            continue;
         }
-        // reply = clients
-        //     .iter()
-        //     .filter(|c| Box::pin(async move {c.socket.read().await.is_some()}))
-        //     .filter(|c| c.identity != client.identity)
-        //     .map(|c| ChannelMemberInfo {
-        //         identity: c.identity.clone(),
-        //         producers: c.producers.lock().unwrap().keys().cloned().collect(),
-        //         user: c.user.clone().into(),
-        //     })
-        //     .collect();
+
+        // do not include information about self
+        if c.identity == client.identity {
+            continue;
+        }
+
+        voice_members.push(ChannelMemberInfo {
+            identity: c.identity.clone(),
+            producers: c.producers.lock().unwrap().keys().cloned().collect(),
+            user: c.user.clone().into(),
+        });
     }
 
-    Json(reply)
+    Json(voice_members)
 }

@@ -72,8 +72,6 @@ pub async fn connect_transport(
         Receive => &client.s2c_transport,
     };
 
-    // read lock here is held across an await? too bad!
-    // no but in all seriousness, this is probably not a good idea...
     transport_to_connect
         .read()
         .await
