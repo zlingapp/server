@@ -107,7 +107,7 @@ pub async fn create_transport(
     };
 
     // If the transport already exists, return an error.
-    if transport_to_assign.read().unwrap().is_some() {
+    if transport_to_assign.read().await.is_some() {
         warn!(
             "client[{:?}]: tried to create {:?} transport when it already exists",
             client.identity, query.transport_type
@@ -144,7 +144,7 @@ pub async fn create_transport(
     );
 
     // Write through the RwLock and assign the transport to the client.
-    *transport_to_assign.write().unwrap() = Some(transport);
+    *transport_to_assign.write().await = Some(transport);
 
     Ok(Json(reply))
 }

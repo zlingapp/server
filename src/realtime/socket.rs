@@ -1,14 +1,13 @@
-use std::{
-    hash::{Hash, Hasher},
-    sync::{Arc, Mutex, RwLock, Weak},
-    time::Duration,
-};
-
 use actix_rt::{task::JoinHandle, time::sleep};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_ws::{Message, MessageStream, Session};
 use futures::StreamExt;
 use lazy_static::lazy_static;
+use std::{
+    hash::{Hash, Hasher},
+    sync::{Arc, Mutex, RwLock, Weak},
+    time::Duration,
+};
 
 pub type Callback<T> = Box<dyn Fn(T) + Send + Sync>;
 
@@ -36,7 +35,7 @@ pub struct Socket {
     /// Internal nanoid, randomly generated.
     pub id: String,
 
-    session: RwLock<Option<actix_ws::Session>>,
+    session: tokio::sync::RwLock<Option<actix_ws::Session>>,
     watchdog_handle: Mutex<Option<JoinHandle<()>>>,
     /// The last time we received a ping from the client.
     pub last_ping: RwLock<Option<std::time::Instant>>,
@@ -51,7 +50,7 @@ impl Socket {
     /// Returns true if the socket is connected.
     /// Locks: session(write)
     pub async fn is_connected(&self) -> bool {
-        if let Some(session) = self.session.write().unwrap().as_mut() {
+        if let Some(session) = self.session.write().await.as_mut() {
             return session.ping(b"").await.is_ok();
         }
         false
@@ -106,7 +105,7 @@ impl Socket {
             };
 
             // disconnect
-            if let Some(session) = socket.session.write().unwrap().take() {
+            if let Some(session) = socket.session.write().await.take() {
                 session.close(None).await.unwrap_or(());
             }
 
@@ -129,7 +128,7 @@ impl Socket {
                 let last_ping = socket.last_ping.read().unwrap().unwrap();
 
                 if last_ping.elapsed() > *SOCKET_LAST_PING_TIMEOUT {
-                    if let Some(session) = socket.session.write().unwrap().take() {
+                    if let Some(session) = socket.session.write().await.take() {
                         session.close(None).await.unwrap_or(());
                     }
 
@@ -153,7 +152,7 @@ impl Socket {
 
         let instance = Arc::new(Self {
             id: socket_id,
-            session: RwLock::new(Some(session.clone())),
+            session: tokio::sync::RwLock::new(Some(session.clone())),
             last_ping: RwLock::new(Some(std::time::Instant::now())),
             watchdog_handle: Mutex::new(None),
             on_message,
@@ -176,26 +175,25 @@ impl Socket {
     pub async fn send(&self, msg: String) -> Result<(), SendFailureReason> {
         use SendFailureReason::*;
 
-        if let Some(session) = self.session.write().unwrap().as_mut() {
+        if let Some(session) = self.session.write().await.as_mut() {
             session.text(msg).await.map_err(|_| SessionClosed)
         } else {
             Err(NoSession)
         }
     }
 }
-
 impl Drop for Socket {
     fn drop(&mut self) {
         if let Some(watchdog) = self.watchdog_handle.lock().unwrap().take() {
             // we connected successfully, so stop the watchdog now
             watchdog.abort();
-        }
-        if let Some(session) = self.session.write().unwrap().take() {
-            // we connected successfully, so close the session now
-            actix_rt::spawn(async move {
+        };
+        let s = self.session.get_mut().clone();
+        actix_rt::spawn(async {
+            if let Some(session) = s {
                 session.close(None).await.unwrap_or(());
-            });
-        }
+            }
+        });
     }
 }
 

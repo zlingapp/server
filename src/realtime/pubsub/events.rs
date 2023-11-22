@@ -123,33 +123,41 @@ pub async fn events_ws(
     let socket_id = nanoid::nanoid!();
 
     {
-        let pubsub = pubsub.clone();
         let socket_id = socket_id.clone();
-
+        let pubsub = pubsub.clone();
         on_message_handler = Box::new(move |msg: String| {
-            if let Ok(esr) = serde_json::from_str::<EventSocketRequest>(&msg) {
-                use EventSocketRequest::*;
-                match esr {
-                    Subscribe { topics } => {
-                        for topic in topics {
-                            pubsub.subscribe(&socket_id, topic).unwrap_or(());
+            let socket_id = socket_id.clone();
+            let pubsub = pubsub.clone();
+            actix_rt::spawn(async move {
+                if let Ok(esr) = serde_json::from_str::<EventSocketRequest>(&msg) {
+                    use EventSocketRequest::*;
+                    match esr {
+                        Subscribe { topics } => {
+                            for topic in topics {
+                                pubsub.subscribe(&socket_id, topic).await.unwrap_or(());
+                            }
                         }
-                    }
-                    Unsubscribe { topics } => {
-                        for topic in topics {
-                            pubsub.unsubscribe(&socket_id, &topic).unwrap_or(());
+                        Unsubscribe { topics } => {
+                            for topic in topics {
+                                pubsub.unsubscribe(&socket_id, topic).await.unwrap_or(());
+                            }
                         }
                     }
                 }
-            }
+            });
         });
     }
-
     {
-        let socket_id = socket_id.clone();
         let pubsub = pubsub.clone();
+        let socket_id = socket_id.clone();
+        let uid = token.user_id.clone();
         on_close_handler = Box::new(move |_| {
-            pubsub.remove_socket(&token.user_id, &socket_id);
+            let pubsub = pubsub.clone();
+            let socket_id = socket_id.clone();
+            let uid = uid.clone();
+            actix_rt::spawn(async move {
+                pubsub.remove_socket(&uid, &socket_id).await;
+            });
         });
     }
 
@@ -163,7 +171,7 @@ pub async fn events_ws(
         Some(on_close_handler),
     )?;
 
-    pubsub.add_socket(id, socket);
+    pubsub.add_socket(id, socket).await;
 
     Ok(response)
 }

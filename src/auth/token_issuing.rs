@@ -15,11 +15,10 @@ lazy_static! {
     pub static ref ACCESS_TOKEN_VALIDITY: Duration = Duration::minutes(10);
 }
 
-#[allow(clippy::large_enum_variant)] // Doesn't really mater...
 pub enum IssueRefreshTokenResult {
     Failure,
     Success {
-        user: User,
+        user: Box<User>,
         access_token: AccessToken,
         refresh_token: Token,
     },
@@ -109,7 +108,7 @@ impl Database {
                     self.create_token_pair(&user.id, user_agent).await;
 
                 IssueRefreshTokenResult::Success {
-                    user,
+                    user: Box::new(user),
                     access_token,
                     refresh_token,
                 }
