@@ -22,7 +22,7 @@ rustls = "0.21"
 rustls-pemfile = "1"
 
 # voice chat
-mediasoup = "0.11.4"
+mediasoup = "0.12.0"
 
 # database
 sqlx = { version = "0.6.2", features = [ "runtime-actix-rustls", "postgres", "macros", "json", "chrono", "offline" ] }

@@ -69,7 +69,7 @@ impl AccessToken {
         let mut token = Token::new(user_id, expires, "".to_string());
 
         let serialized = token.to_string();
-        let payload = serialized.strip_suffix(".").unwrap().as_bytes();
+        let payload = serialized.strip_suffix('.').unwrap().as_bytes();
 
         // signs the payload and appends the signature
         token.proof = base64_url::encode(&crypto::sign(&*TOKEN_SIGNING_KEY, payload));
@@ -84,7 +84,7 @@ impl AccessToken {
 
         let token = Token::new(self.user_id.clone(), self.expires, "".to_string());
         let serialized = token.to_string();
-        let payload = serialized.strip_suffix(".").unwrap().as_bytes();
+        let payload = serialized.strip_suffix('.').unwrap().as_bytes();
 
         crypto::verify_signature(&*TOKEN_SIGNING_KEY, payload, &signature)
     }
@@ -100,8 +100,8 @@ impl FromStr for AccessToken {
     type Err = AccessTokenParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let token = Token::from_str(s).map_err(|e| AccessTokenParseError::TokenInvalid(e))?;
-        Ok(AccessToken::from_existing(token).ok_or(AccessTokenParseError::SignatureInvalid)?)
+        let token = Token::from_str(s).map_err(AccessTokenParseError::TokenInvalid)?;
+        AccessToken::from_existing(token).ok_or(AccessTokenParseError::SignatureInvalid)
     }
 }
 

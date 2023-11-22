@@ -55,10 +55,7 @@ pub async fn reissue(
     }
 
     let user_agent = match req.headers().get("User-Agent") {
-        Some(user_agent) => match user_agent.to_str() {
-            Ok(user_agent) => user_agent,
-            Err(_) => "Unknown",
-        },
+        Some(user_agent) => user_agent.to_str().unwrap_or("Unknown"),
         None => "Unknown",
     };
 

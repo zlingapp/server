@@ -10,7 +10,7 @@ use actix_ws::{Message, MessageStream, Session};
 use futures::StreamExt;
 use lazy_static::lazy_static;
 
-pub type Callback<T> = Box<dyn Fn(T) -> () + Send + Sync>;
+pub type Callback<T> = Box<dyn Fn(T) + Send + Sync>;
 
 lazy_static! {
     static ref SOCKET_LAST_PING_TIMEOUT: Duration = Duration::from_secs(30);
@@ -149,7 +149,7 @@ impl Socket {
         on_message: Option<Callback<String>>,
         on_disconnect: Option<Callback<DisconnectReason>>,
     ) -> Result<(Arc<Self>, HttpResponse), actix_web::Error> {
-        let (response, session, msg_stream) = actix_ws::handle(&req, body)?;
+        let (response, session, msg_stream) = actix_ws::handle(req, body)?;
 
         let instance = Arc::new(Self {
             id: socket_id,

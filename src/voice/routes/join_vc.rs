@@ -141,7 +141,7 @@ pub async fn join_vc(
     };
 
     // create a new client
-    let client = VoiceClient::with_channel_and_user(channel.clone(), user.into());
+    let client = VoiceClient::with_channel_and_user(channel.clone(), user);
     let client = Arc::new(client);
 
     // add the client to the channel's client list

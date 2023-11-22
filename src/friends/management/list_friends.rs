@@ -29,8 +29,7 @@ pub async fn list_friends(db: DB, token: AccessToken) -> HResult<Json<Vec<Public
         token.user_id
     )
     .fetch_all(&db.pool)
-    .await
-    .map(|r| Json(r))?;
+    .await?;
 
-    Ok(result)
+    Ok(Json(result))
 }

@@ -144,7 +144,7 @@ impl FromRequest for VoiceClientEx {
                     .map(|s| s.to_string());
             }
 
-            if rtc_token == None || rtc_identity == None {
+            if rtc_token.is_none() || rtc_identity.is_none() {
                 return err!(401);
             }
 
@@ -175,7 +175,7 @@ impl FromRequest for VoiceClientEx {
                 return err!(400, "You need to connect to the voice event socket first.")?;
             }
 
-            return Ok(VoiceClientEx(client));
+            Ok(VoiceClientEx(client))
         })
     }
 }

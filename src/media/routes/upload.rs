@@ -100,7 +100,7 @@ pub async fn upload(
 
         let filename = content_disposition.get_filename().map(String::from);
         // clean the file name
-        let filename = match filename.map(|v| clean_filename(v)).flatten() {
+        let filename = match filename.and_then(clean_filename) {
             Some(n) => n,
             None => random_file_name(),
         };

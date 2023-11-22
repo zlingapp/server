@@ -75,14 +75,15 @@ impl VoiceChannel {
         // remove the client from the global clients map
         let removed = global_clients.lock().unwrap().remove(client_identity);
 
-        if removed.is_none() {
-            // this should never happen in theory
-            warn!(
-                "client[{:?}]: Channel::erase_client() called twice",
-                client_identity
-            );
-        } else {
-            removed.unwrap().cleanup();
+        match removed {
+            Some(r) => r.cleanup(),
+            None => {
+                // this should never happen in theory
+                warn!(
+                    "client[{:?}]: Channel::erase_client() called twice",
+                    client_identity
+                )
+            }
         }
 
         // if the channel is empty, remove it from the global channels map
@@ -141,5 +142,5 @@ pub async fn create_channel(
 
     info!("channel[{:?}]: created", channel.id);
 
-    return channel;
+    channel
 }

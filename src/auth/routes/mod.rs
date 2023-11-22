@@ -31,7 +31,7 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
         super::token::Token,
         super::access_token::AccessToken,
         login::LoginRequest,
-        login::LoginResponese,
+        login::LoginResponse,
         reissue::ReissueRequest,
         reissue::ReissueResponse,
         register::RegisterRequest,

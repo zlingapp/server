@@ -1,4 +1,3 @@
-use argon2;
 use hmac::{Hmac, Mac};
 use rand::Rng;
 use sha2::Sha256;
@@ -22,7 +21,7 @@ fn generate_12b_nonce() -> [u8; 12] {
 pub fn hash(plaintext: &str) -> String {
     let salt = generate_12b_nonce();
     let hashed = argon2::hash_encoded(plaintext.as_bytes(), &salt, &ARGON2_CONFIG).unwrap();
-    return hashed;
+    hashed
 }
 
 pub fn verify(plaintext: &str, hash: &str) -> bool {

@@ -27,7 +27,7 @@ impl PubSubMap {
     pub fn add_socket(&mut self, user_id: String, socket: Arc<Socket>) {
         self.user_id_to_sockets
             .entry(user_id)
-            .or_insert(Vec::new())
+            .or_default()
             .push(socket.clone());
 
         self.socket_id_to_socket_and_topics
@@ -70,7 +70,7 @@ impl PubSubMap {
         if let Some((socket, topics)) = self.socket_id_to_socket_and_topics.get_mut(socket_id) {
             topics.retain(|t| t != topic);
 
-            if let Some(sockets) = self.topic_to_sockets.get_mut(&topic) {
+            if let Some(sockets) = self.topic_to_sockets.get_mut(topic) {
                 sockets.remove(socket);
             }
         } else {
