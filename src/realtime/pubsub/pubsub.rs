@@ -145,7 +145,13 @@ impl PubSub {
         .await;
     }
     pub async fn send_user_typing(&self, to_user: &str, from_user: &User) {
-        self.send_to(to_user, Event::Typing{ user: &from_user.clone().into()}).await;
+        self.send_to(
+            to_user,
+            Event::Typing {
+                user: &from_user.clone().into(),
+            },
+        )
+        .await;
     }
 
     pub async fn send_typing(&self, channel_id: &str, user: &User) {

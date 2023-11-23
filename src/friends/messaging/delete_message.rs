@@ -10,7 +10,7 @@ use crate::{
     auth::user::User,
     db::DB,
     error::{macros::err, HResult},
-    friends::dmchannel::{DMChannel,DMPath},
+    friends::dmchannel::{DMChannel, DMPath},
     realtime::pubsub::pubsub::PubSub,
 };
 
@@ -30,7 +30,6 @@ pub struct DeleteMessagePath {
     responses(
         (status = OK, description = "Message deleted successfully"),
         (status = FORBIDDEN, description = "You are not friends with that user"),
-        (status = FORBIDDEN, description = "No permission to delete message")
     )
 )]
 #[delete("/friends/{user_id}/messages/{message_id}")]
