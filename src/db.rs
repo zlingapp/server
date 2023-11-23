@@ -136,6 +136,15 @@ impl Database {
         self.can_user_see_channel(user_id, channel_id).await
     }
 
+    // TODO: Add permissions
+    pub async fn can_user_create_invite_in(
+        &self,
+        user_id: &str,
+        guild_id: &str,
+    ) -> Result<bool, sqlx::Error> {
+        self.is_user_in_guild(user_id, guild_id).await
+    }
+
     pub async fn get_message(
         &self,
         channel_id: &str,
@@ -295,15 +304,17 @@ impl Database {
             // return the existing channel's id
             Some(channel) => channel.id,
             // create a new channel
-            None => sqlx::query!(
+            None => {
+                sqlx::query!(
                 "INSERT INTO dmchannels (id, from_user, to_user) VALUES ($1, $2, $3) RETURNING id",
                 nanoid!(),
                 user1,
                 user2
             )
-            .fetch_one(&self.pool)
-            .await?
-            .id,
+                .fetch_one(&self.pool)
+                .await?
+                .id
+            }
         };
 
         Ok(channel_id)

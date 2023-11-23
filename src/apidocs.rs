@@ -9,7 +9,7 @@ use utoipa::{
 use crate::{
     auth::routes::AuthApiDocs, bot::routes::BotsApiDoc, channels::routes::ChannelsApiDocs,
     friends::management::FriendsManagementApiDoc, friends::messaging::FriendsMessagingApiDoc,
-    guilds::routes::GuildsApiDocs, media::routes::MediaApiDocs,
+    guilds::routes::GuildsApiDocs, invites::routes::InvitesApiDoc, media::routes::MediaApiDocs,
     messaging::routes::MessagingApiDocs, realtime::pubsub::PubSubApiDoc,
     voice::routes::VoiceApiDoc,
 };
@@ -37,7 +37,7 @@ pub fn setup_oapi() -> utoipa::openapi::OpenApi {
     oapi.merge(BotsApiDoc::openapi());
     oapi.merge(FriendsManagementApiDoc::openapi());
     oapi.merge(FriendsMessagingApiDoc::openapi());
-
+    oapi.merge(InvitesApiDoc::openapi());
     oapi
 }
 
