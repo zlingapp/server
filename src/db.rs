@@ -275,29 +275,37 @@ impl Database {
         .await?;
         Ok(())
     }
-    pub async fn get_dm_channel(&self, from_id: &str, to_id: &str) -> Result<String, sqlx::Error> {
+    pub async fn get_dm_channel_id(
+        &self,
+        from_id: &str,
+        to_id: &str,
+    ) -> Result<String, sqlx::Error> {
         let user1 = std::cmp::min(from_id, to_id);
         let user2 = std::cmp::max(from_id, to_id);
-        let chan = sqlx::query!(
+
+        let existing_channel = sqlx::query!(
             "SELECT id FROM dmchannels WHERE from_user = $1 AND to_user = $2",
             user1,
             user2
         )
         .fetch_optional(&self.pool)
         .await?;
-        Ok(match chan {
-            Some(c) => c.id,
-            None => {
-                sqlx::query!(
-                    "INSERT INTO dmchannels(id,from_user,to_user) VALUES ($1,$2,$3) RETURNING id",
-                    nanoid!(),
-                    user1,
-                    user2
-                )
-                .fetch_one(&self.pool)
-                .await?
-                .id
-            }
-        })
+
+        let channel_id = match existing_channel {
+            // return the existing channel's id
+            Some(channel) => channel.id,
+            // create a new channel
+            None => sqlx::query!(
+                "INSERT INTO dmchannels (id, from_user, to_user) VALUES ($1, $2, $3) RETURNING id",
+                nanoid!(),
+                user1,
+                user2
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .id,
+        };
+
+        Ok(channel_id)
     }
 }
