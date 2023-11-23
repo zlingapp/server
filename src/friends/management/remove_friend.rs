@@ -38,15 +38,25 @@ pub async fn remove_friend(
         return err!(400, "You are not friends with that user");
     }
 
+    let mut tx = db.pool.begin().await?;
+
     sqlx::query!(
-        r#"UPDATE users
-            SET friends = ARRAY_REMOVE(friends,$1)
-            WHERE id=$2"#,
+        r#"UPDATE users SET friends = ARRAY_REMOVE(friends, $1) WHERE id = $2"#,
         path.user_id,
         token.user_id
     )
-    .execute(&db.pool)
+    .execute(&mut tx)
     .await?;
+
+    sqlx::query!(
+        r#"UPDATE users SET friends = ARRAY_REMOVE(friends, $1) WHERE id = $2"#,
+        token.user_id,
+        path.user_id,
+    )
+    .execute(&mut tx)
+    .await?;
+
+    tx.commit().await?;
 
     // Let them know that we no longer require their services
     // note: this unwrap panics if authenticated user does not exist in db but this will rarely happen
