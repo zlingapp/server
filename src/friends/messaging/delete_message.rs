@@ -63,7 +63,7 @@ pub async fn delete_message(
     }
 
     pubsub
-        .notify_dm_message_deleted(&channel.id, &user.id, &message_path.message_id)
+        .notify_dm_message_deleted(&channel.to_user_id, &user.id, &message_path.message_id)
         .await;
 
     // TODO: standardize ok responses as json here

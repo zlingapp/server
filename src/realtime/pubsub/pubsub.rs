@@ -129,9 +129,26 @@ impl PubSub {
     }
 
     pub async fn notify_dm_new_message(&self, recipient_id: &str, message: &Message) {
+        // send to the recipient
         self.send_to_user(
             recipient_id,
             &Topic::new(TopicType::DmChannel, message.author.id.clone()),
+            Event::Message(message),
+        )
+        .await;
+
+        if recipient_id == message.author.id {
+            // somehow we are in a dm with ourselves and we are sending a
+            // message to ourselves
+            return;
+        }
+
+        // send the author's own message to the author as well
+        self.send_to_user(
+            &message.author.id,
+            // the dmchannel topic has the recipient's id because
+            // that's the topic that the author follows
+            &Topic::new(TopicType::DmChannel, recipient_id.to_string()),
             Event::Message(message),
         )
         .await;
@@ -192,6 +209,20 @@ impl PubSub {
             Event::DeleteMessage { id: (message_id) },
         )
         .await;
+
+        if recipient_id == deleter_id {
+            // somehow we are in a dm with ourselves and we are deleting our own message
+            return;
+        }
+
+        // send event back to the deleter as well
+        self.send_to_user(
+            deleter_id,
+            // the dmchannel topic has the recipient's id because
+            // that's the topic that the deleter follows
+            &Topic::new(TopicType::DmChannel, recipient_id.to_string()),
+            Event::DeleteMessage { id: (message_id) },
+        ).await;
     }
 
     pub async fn notify_friend_request_sent(&self, recipient_id: &str, sender: &PublicUserInfo) {

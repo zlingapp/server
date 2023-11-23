@@ -1,6 +1,6 @@
 use actix_web::{
     post,
-    web::{Data, Json, Path},
+    web::{Data, Json},
 };
 use chrono::{DateTime, Utc};
 use nanoid::nanoid;
@@ -53,7 +53,6 @@ async fn send_message(
     user: User,
     req: Json<SendDMRequest>,
     channel: DMChannel,
-    path: Path<DMPath>,
     pubsub: Data<PubSub>,
 ) -> HResult<Json<SendDMResponse>> {
     // get inner value
@@ -116,7 +115,9 @@ async fn send_message(
     };
 
     // tell people listening to this channel that there's a new message
-    pubsub.notify_dm_new_message(&path.user_id, &message).await;
+    pubsub
+        .notify_dm_new_message(&channel.to_user_id, &message)
+        .await;
 
     Ok(Json(SendDMResponse {
         id: message.id,
