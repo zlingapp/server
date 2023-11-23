@@ -277,7 +277,7 @@ impl Database {
     }
     pub async fn get_dm_channel(&self, from_id: &str, to_id: &str) -> Result<String, sqlx::Error> {
         let user1 = std::cmp::min(from_id, to_id);
-        let user2 = std::cmp::max(from_id,to_id);
+        let user2 = std::cmp::max(from_id, to_id);
         let chan = sqlx::query!(
             "SELECT id FROM dmchannels WHERE from_user = $1 AND to_user = $2",
             user1,

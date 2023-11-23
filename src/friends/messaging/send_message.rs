@@ -7,13 +7,13 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 
 use serde_json::Value;
-use utoipa::{IntoParams, ToSchema};
+use utoipa::ToSchema;
 
 use crate::{
     auth::user::User,
     db::DB,
     error::{macros::err, HResult},
-    friends::dmchannel::DMChannel,
+    friends::dmchannel::{DMChannel, DMPath},
     media::routes::upload::UploadedFileInfo,
     messaging::message::Message,
     realtime::pubsub::pubsub::PubSub,
@@ -34,18 +34,13 @@ pub struct SendDMResponse {
     created_at: DateTime<Utc>,
 }
 
-#[derive(Deserialize, IntoParams)]
-pub struct SendDMPath {
-    pub user_id: String,
-}
-
 /// Send a direct message
 ///
 /// Sends a message in the DM Channel with the specified user, creating one if it doesnt exist
 #[utoipa::path(
     tag = "DMs",
     security(("token" = [])),
-    params(SendDMPath),
+    params(DMPath),
     responses(
         (status = OK, description = "Message sent", body = SendMessageResponse),
         (status = FORBIDDEN, description = "No permission to send message to user (not friends)"),
@@ -58,7 +53,7 @@ async fn send_message(
     user: User,
     req: Json<SendDMRequest>,
     channel: DMChannel,
-    path: Path<SendDMPath>,
+    path: Path<DMPath>,
     pubsub: Data<PubSub>,
 ) -> HResult<Json<SendDMResponse>> {
     // get inner value
@@ -80,12 +75,7 @@ async fn send_message(
         }
     }
 
-    // permission check here
-    let can_send = db.is_user_friend(&user.id, &path.user_id).await?;
-
-    if !can_send {
-        err!(403)?;
-    }
+    // No need to do a permission check, DMChannel extractor already does that
 
     // serialize attachments list back to json
     let attachments = match req.attachments {
