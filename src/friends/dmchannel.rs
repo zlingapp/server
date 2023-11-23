@@ -2,13 +2,19 @@ use std::pin::Pin;
 
 use actix_web::{web::Path, FromRequest};
 
-use futures::Future;
-
 use crate::db::DB;
+use crate::error::macros::err;
 use crate::error::{HResult, HandlerError, IntoHandlerErrorResult};
+use futures::Future;
+use serde::Deserialize;
+use utoipa::IntoParams;
 
-use crate::{auth::access_token::AccessToken, friends::messaging::send_message::SendDMPath};
+use crate::auth::access_token::AccessToken;
 
+#[derive(Deserialize, IntoParams)]
+pub struct DMPath {
+    pub user_id: String,
+}
 pub struct DMChannel {
     pub id: String,
 }
@@ -22,7 +28,7 @@ impl FromRequest for DMChannel {
     ) -> Self::Future {
         let req = req.clone();
         Box::pin(async move {
-            let to_id = &Path::<SendDMPath>::from_request(&req, &mut actix_web::dev::Payload::None)
+            let to_id = &Path::<DMPath>::from_request(&req, &mut actix_web::dev::Payload::None)
                 .await
                 .or_err(400)?
                 .into_inner()
@@ -30,13 +36,12 @@ impl FromRequest for DMChannel {
             let from_id = &AccessToken::from_request(&req, &mut actix_web::dev::Payload::None)
                 .await?
                 .user_id;
+            let db = req.app_data::<DB>().or_err(500)?;
+            if !db.is_user_friend(from_id, to_id).await? {
+                err!(403)?;
+            }
             Ok(Self {
-                id: req
-                    .app_data::<DB>()
-                    .or_err(500)?
-                    .get_dm_channel(from_id, to_id)
-                    .await
-                    .or_err(500)?,
+                id: db.get_dm_channel(from_id, to_id).await.or_err(500)?,
             })
         })
     }

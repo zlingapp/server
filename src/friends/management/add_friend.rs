@@ -1,8 +1,3 @@
-use actix_web::{
-    post,
-    web::{Data, Json},
-};
-use sqlx::query;
 use crate::{
     auth::user::User,
     db::DB,
@@ -10,6 +5,11 @@ use crate::{
     friends::friend_request::{UserIdParams, UserIdPath},
     realtime::pubsub::pubsub::{Event, PubSub},
 };
+use actix_web::{
+    post,
+    web::{Data, Json},
+};
+use sqlx::query;
 
 /// Add a friend
 ///
