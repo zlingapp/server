@@ -17,6 +17,7 @@ pub struct DMPath {
 }
 pub struct DMChannel {
     pub id: String,
+    pub to_user_id: String,
 }
 
 impl FromRequest for DMChannel {
@@ -31,7 +32,6 @@ impl FromRequest for DMChannel {
             let to_id = &Path::<DMPath>::from_request(&req, &mut actix_web::dev::Payload::None)
                 .await
                 .or_err(400)?
-                .into_inner()
                 .user_id;
             let from_id = &AccessToken::from_request(&req, &mut actix_web::dev::Payload::None)
                 .await?
@@ -42,6 +42,7 @@ impl FromRequest for DMChannel {
             }
             Ok(Self {
                 id: db.get_dm_channel(from_id, to_id).await.or_err(500)?,
+                to_user_id: to_id.clone()
             })
         })
     }

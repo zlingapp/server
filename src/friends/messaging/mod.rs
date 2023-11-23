@@ -1,5 +1,6 @@
 pub mod delete_message;
 pub mod send_message;
+pub mod typing;
 use utoipa::OpenApi;
 
 pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
