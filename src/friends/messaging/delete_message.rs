@@ -10,7 +10,7 @@ use crate::{
     auth::user::User,
     db::DB,
     error::{macros::err, HResult},
-    friends::dmchannel::DMChannel,
+    friends::dmchannel::{DMChannel,DMPath},
     realtime::pubsub::pubsub::PubSub,
 };
 
@@ -26,7 +26,7 @@ pub struct DeleteMessagePath {
 #[utoipa::path(
     tag = "DMs",
     security(("token" = [])),
-    params(DeleteMessagePath),
+    params(DMPath, DeleteMessagePath),
     responses(
         (status = OK, description = "Message deleted successfully"),
         (status = FORBIDDEN, description = "You are not friends with that user"),
