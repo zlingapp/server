@@ -42,7 +42,7 @@ impl FromRequest for DMChannel {
             }
             Ok(Self {
                 id: db.get_dm_channel(from_id, to_id).await.or_err(500)?,
-                to_user_id: to_id.clone()
+                to_user_id: to_id.clone(),
             })
         })
     }
