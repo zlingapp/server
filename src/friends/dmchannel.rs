@@ -45,7 +45,7 @@ impl FromRequest for DMChannel {
             let db = req.app_data::<DB>().or_err(500)?;
 
             if !db.is_user_friend(from_id, to_id).await? {
-                err!(403)?;
+                err!(403, "You cannot message this user as you are not their friend.")?;
             }
 
             Ok(Self {
