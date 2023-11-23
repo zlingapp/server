@@ -3,13 +3,12 @@ use crate::{
     db::DB,
     error::{macros::err, HResult},
     friends::friend_request::{UserIdParams, UserIdPath},
-    realtime::pubsub::pubsub::{Event, PubSub},
+    realtime::pubsub::pubsub::PubSub,
 };
 use actix_web::{
     post,
     web::{Data, Json},
 };
-use sqlx::query;
 
 /// Add a friend
 ///
@@ -36,60 +35,52 @@ pub async fn add_friend(
     if me.id == path.user_id {
         err!(400, "You cannot add yourself as a friend")?;
     }
+
     if db.is_user_friend(&me.id, &path.user_id).await? {
         err!(400, "You are already friends with that user")?;
     }
-    let incoming = db.list_incoming_friend_requests(&me.id).await?;
-    if incoming.iter().any(|i| i.user.id == path.user_id) {
-        // We have an incoming friend request, add friends now
-        db.add_friends(&path.user_id, &me.id).await?;
 
-        query!(
-            r#"DELETE FROM friend_requests
-            WHERE from_user=$1
-            AND to_user=$2"#,
-            &path.user_id,
-            &me.id
-        )
-        .execute(&db.pool)
-        .await?;
-
-        // Notify the other party that their request has been accepted
-
-        pubsub
-            .send_to(
-                &path.user_id,
-                Event::FriendRequestUpdate { user: &me.into() },
-            )
-            .await;
-
-        return Ok(Json("Friend successfully added".into()));
-    }
-    let outgoing = db.list_outgoing_friend_requests(&me.id).await?;
-    if outgoing.iter().any(|i| i.user.id == path.user_id) {
-        err!(
-            400,
-            "An outgoing friend request to this user already exists"
-        )?;
-    }
-
-    // Now we should create an outgoing friend request
-    sqlx::query!(
-        r#"INSERT INTO friend_requests
-            VALUES ($1,$2)"#,
+    let incoming_deleted = sqlx::query!(
+        r#"DELETE FROM friend_requests WHERE to_user=$1 AND from_user=$2"#,
         &me.id,
         &path.user_id
     )
     .execute(&db.pool)
-    .await?;
+    .await?
+    .rows_affected();
 
-    // Notify the other party that I am now your friend
+    if incoming_deleted > 0 {
+        db.add_friends(&path.user_id, &me.id).await?;
+
+        // Notify the other party that their request has been accepted
+        pubsub
+            .notify_friend_request_accepted(&path.user_id, &me.into())
+            .await;
+
+        // TODO: standardize responses
+        return Ok(Json("Friend added".into()));
+    }
+
+    // there is no incoming friend request, so we should create an outgoing one
+    let rows_affected = sqlx::query!(
+        r#"INSERT INTO friend_requests (from_user, to_user) VALUES ($1, $2) ON CONFLICT DO NOTHING"#,
+        &me.id,
+        &path.user_id
+    )
+    .execute(&db.pool)
+    .await?.rows_affected();
+
+    if rows_affected == 0 {
+        err!(
+            400,
+            "An outgoing friend request to that user already exists"
+        )?;
+    }
+
+    // Notify the other party that we sent them a friend request
     pubsub
-        .send_to(
-            &path.user_id,
-            Event::FriendRequestUpdate { user: &me.into() },
-        )
+        .notify_friend_request_sent(&path.user_id, &me.into())
         .await;
 
-    Ok(Json("Friend request sucessfully sent".into()))
+    Ok(Json("Friend request sent".into()))
 }

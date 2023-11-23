@@ -22,7 +22,9 @@ use crate::{
 )]
 #[post("/friends/{user_id}/typing")]
 pub async fn typing(channel: DMChannel, user: User, pubsub: Data<PubSub>) -> HResult<HttpResponse> {
-    pubsub.send_user_typing(&channel.to_user_id, &user).await;
+    pubsub
+        .send_dm_typing(&channel.to_user_id, &user.into())
+        .await;
 
     Ok(HttpResponse::Ok().finish())
 }

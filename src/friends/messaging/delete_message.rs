@@ -40,28 +40,32 @@ pub async fn delete_message(
     channel: DMChannel,
     pubsub: Data<PubSub>,
 ) -> HResult<HttpResponse> {
-    if let Ok(message) = db.get_message(&channel.id, &message_path.message_id).await {
-        if message.author.id != user.id {
-            // No need to do any permission checks for a DM
-            err!(403)?;
-        }
+    let messages_deleted = sqlx::query!(
+        "DELETE FROM messages WHERE id = $1 AND channel_id = $2 AND user_id = $3",
+        message_path.message_id,
+        channel.id,
+        user.id
+    )
+    .execute(&db.pool)
+    .await?
+    .rows_affected();
 
-        // delete the message from the db
-        sqlx::query!("DELETE FROM messages WHERE id = $1", message.id)
-            .execute(&db.pool)
-            .await?;
+    if messages_deleted == 0 {
+        // if the channel id is not your own, you can't delete the message so
+        // you get a 403
 
-        // tell clients that the message got deleted
-        pubsub
-            .notify_user_message_deletion(&channel.id, &message.id)
-            .await;
-    } else {
-        // note: we don't want to return a 404 if the message doesn't exist, because
-        // that would leak information about whether or not a message exists even if
-        // the user doesn't have permission to view it. It doesn't really matter what
-        // this returns
+        // if the message is not your own, you can't delete the message so you
+        // get a 403
+
+        // if the message doesn't exist, we don't want to leak that information
+        // anyways, so you get a 403
         err!(403)?;
     }
 
+    pubsub
+        .notify_dm_message_deleted(&channel.id, &user.id, &message_path.message_id)
+        .await;
+
+    // TODO: standardize ok responses as json here
     Ok(HttpResponse::Ok().finish())
 }
