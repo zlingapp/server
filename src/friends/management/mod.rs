@@ -7,6 +7,8 @@ pub mod remove_friend;
 pub mod remove_friend_request;
 use crate::friends::friend_request::{FriendRequest, FriendRequestType};
 
+use self::add_friend::AddFriendRequest;
+
 pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(list_friend_requests::list_friend_requests);
     cfg.service(list_friends::list_friends);
@@ -29,7 +31,8 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
     ),
     components(schemas(
         FriendRequest,
-        FriendRequestType
+        FriendRequestType,
+        AddFriendRequest // as in "request for the add friend endpoint" not "add a friend request" 
     ))
 )]
 pub struct FriendsManagementApiDoc;

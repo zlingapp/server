@@ -41,6 +41,28 @@ impl Database {
         Ok(user)
     }
 
+    pub async fn get_user_by_username(&self, name: &str, ignore_bots: bool) -> Result<Option<User>, sqlx::Error> {
+        let user = sqlx::query_as!(
+            User,
+            r#"
+                SELECT id, name, email, avatar, bot
+                FROM users
+                WHERE name = $1
+            "#,
+            name
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(ref user) = user {
+            if user.bot && ignore_bots {
+                return Ok(None);
+            }
+        }
+
+        Ok(user)
+    }
+
     pub async fn register_user(&self, user: &User, password: &str) -> Result<bool, sqlx::Error> {
         let rows_affected = query!(
             r#"
