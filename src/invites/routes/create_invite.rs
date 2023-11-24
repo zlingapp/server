@@ -33,11 +33,11 @@ const INVITE_CODE_ALPHABET: [char; 34] = [
 ];
 
 /// Create an invite code
-/// 
-/// Creates an invite code with a certain expiry and amount of uses for a certain guild. 
-/// 
+///
+/// Creates an invite code with a certain expiry and amount of uses for a certain guild.
+///
 /// This code can then be used to gain info about the guild, or to join the guild, redeeming a use.
-/// 
+///
 /// Setting expires_at to null represents an indefinite invite, and setting uses to null represents unlimited uses.
 #[utoipa::path(
     params(),
@@ -58,7 +58,9 @@ pub async fn create_invite(
 ) -> HResult<Json<CreateInviteResponse>> {
     if !db
         .can_user_create_invite_in(&user.id, &req.guild_id)
-        .await?
+        .await
+        .unwrap_or(false)
+    // This probably errors if the guild doesn't exist
     {
         err!(403)?;
     }
@@ -71,7 +73,7 @@ pub async fn create_invite(
     if req.uses.is_some_and(|x| x <= 0) {
         err!(400, "An invite needs a positive (or null) number of uses")?;
     }
-    // Might be unnecessary? See foreign key constraints
+    // Might be unnecessary? See foreign key constraints, above 403 check
     // if query!("SELECT name FROM guilds WHERE id = $1", req.guild_id)
     //     .fetch_optional(&db.pool)
     //     .await?

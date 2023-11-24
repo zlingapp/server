@@ -145,6 +145,23 @@ impl Database {
         self.is_user_in_guild(user_id, guild_id).await
     }
 
+    pub async fn can_user_delete_invite(
+        &self,
+        user_id: &str,
+        invite_id: &str,
+    ) -> Result<bool, sqlx::Error> {
+        let owner = sqlx::query!(
+            r#"SELECT guilds.owner 
+                FROM guilds,invites 
+                WHERE invites.code = $1 
+                AND guilds.id=invites.guild_id"#,
+            invite_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(owner.owner == user_id)
+    }
+
     pub async fn get_message(
         &self,
         channel_id: &str,
