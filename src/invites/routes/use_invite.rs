@@ -3,7 +3,7 @@ use crate::{
     db::DB,
     error::{macros::err, HResult},
     invites::routes::see_invite::InvitePath,
-    realtime::pubsub::pubsub::PubSub,
+    realtime::pubsub::pubsub::PubSub, guilds::routes::list_joined_guilds::GuildInfo,
 };
 use actix_web::{
     post,
@@ -32,17 +32,18 @@ pub async fn use_invite(
     path: Path<InvitePath>,
     user: User,
     pubsub: Data<PubSub>,
-) -> HResult<Json<String>> {
+) -> HResult<Json<GuildInfo>> {
     let resp = query!(
-        r#"SELECT guilds.id, invites.expires_at, invites.uses
+        r#"SELECT guilds.id,guilds.name, guilds.icon, invites.expires_at, invites.uses
             FROM guilds, invites
             WHERE invites.code = $1
-            AND invites.guild_id = guild_id"#,
+            AND invites.guild_id = guilds.id"#,
         path.invite_id
     )
     .fetch_optional(&db.pool)
-    .await?
-    .unwrap_or(err!(400, "Invalid invite code")?);
+    .await?.ok_or(crate::error::HandlerError::from((400, "Invalid invite code".into())))?; // This kinda sucks...
+
+    let guild = GuildInfo { id: resp.id, name: resp.name, icon: resp.icon};
 
     if resp
         .expires_at
@@ -62,8 +63,8 @@ pub async fn use_invite(
             WHERE NOT EXISTS (SELECT 1 FROM members WHERE user_id = $1 AND guild_id = $2) 
             AND EXISTS (SELECT 1 FROM guilds WHERE guilds.id = $2)
         "#,
-        user.id,
-        resp.id
+        &user.id,
+        &guild.id
     )
     .execute(&db.pool)
     .await?
@@ -83,8 +84,8 @@ pub async fn use_invite(
         .execute(&db.pool)
         .await?;
     }
-    pubsub.notify_guild_member_list_update(&resp.id).await;
+    pubsub.notify_guild_member_list_update(&guild.id).await;
 
     // TODO standardised responses
-    Ok(Json("Guild successfully joined".into()))
+    Ok(Json(guild))
 }
