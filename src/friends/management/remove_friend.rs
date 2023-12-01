@@ -4,7 +4,7 @@ use crate::{
     error::macros::err,
     error::HResult,
     friends::friend_request::{UserIdParams, UserIdPath},
-    realtime::pubsub::pubsub::{Event, PubSub},
+    realtime::pubsub::pubsub::PubSub,
 };
 use actix_web::{
     delete,
@@ -30,32 +30,41 @@ pub async fn remove_friend(
     path: UserIdPath,
     token: AccessToken,
 ) -> HResult<Json<String>> {
+    if path.user_id == token.user_id {
+        return err!(400, "You cannot remove yourself as a friend");
+    }
+
     if !db.is_user_friend(&token.user_id, &path.user_id).await? {
         return err!(400, "You are not friends with that user");
     }
+
+    let mut tx = db.pool.begin().await?;
+
     sqlx::query!(
-        r#"UPDATE users
-            SET friends = ARRAY_REMOVE(friends,$1)
-            WHERE id=$2"#,
+        r#"UPDATE users SET friends = ARRAY_REMOVE(friends, $1) WHERE id = $2"#,
         path.user_id,
         token.user_id
     )
-    .execute(&db.pool)
+    .execute(&mut tx)
     .await?;
 
+    sqlx::query!(
+        r#"UPDATE users SET friends = ARRAY_REMOVE(friends, $1) WHERE id = $2"#,
+        token.user_id,
+        path.user_id,
+    )
+    .execute(&mut tx)
+    .await?;
+
+    tx.commit().await?;
+
     // Let them know that we no longer require their services
-    let me_user = db
-        .get_user_by_id(&token.user_id)
-        .await?
-        .expect("A user not in the db sent an authenticated request?? WTF!!!");
+    // note: this unwrap panics if authenticated user does not exist in db but this will rarely happen
+    let me_user = db.get_user_by_id(&token.user_id).await?.unwrap();
+
     pubsub
-        .send_to(
-            &path.user_id,
-            Event::FriendRemove {
-                user: &me_user.into(),
-            },
-        )
+        .notify_friend_remove(&path.user_id, &me_user.into())
         .await;
 
-    Ok(Json("success".to_string()))
+    Ok(Json("Friend removed".to_string()))
 }

@@ -140,7 +140,8 @@ async fn main() -> std::io::Result<()> {
             // bots
             .configure(bot::routes::configure_app)
             // friends
-            .configure(friends::routes::configure_app)
+            .configure(friends::management::configure_app)
+            .configure(friends::messaging::configure_app)
             .default_service(web::route().to(api_endpoint_not_found))
             // OpenAPI docs
             .service(

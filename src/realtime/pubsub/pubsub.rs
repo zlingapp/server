@@ -35,9 +35,12 @@ pub enum Event<'l> {
 
     /// Some sort of update to a friend request. Clients should keep track of these
     /// Options
-    /// - Someone sent you a friend request
-    /// - Someone accepted your friend request
-    FriendRequestUpdate { user: &'l PublicUserInfo },
+    /// - Someone sent you a friend request (state: "sent")
+    /// - Someone accepted your friend request (state: "accepted")
+    FriendRequestUpdate {
+        user: &'l PublicUserInfo,
+        state: &'l str,
+    },
     /// A friend request has been deleted. Clients should keep track of theses
     /// Options
     /// - Someone denied your friend request
@@ -75,7 +78,10 @@ impl PubSub {
             join_all(futures).await;
         }
     }
-    pub async fn send_to(&self, user_id: &str, event: Event<'_>) {
+
+    /// Sends an event directly to a user by their ID.
+    /// event will be sent on the User topic
+    pub async fn send_to_user(&self, user_id: &str, topic: &Topic, event: Event<'_>) {
         let map = self.map.read().await;
 
         if let Some(user_sockets) = map.user_id_to_sockets.get(user_id) {
@@ -85,7 +91,7 @@ impl PubSub {
                 futures.push(
                     socket.send(
                         json!({
-                            "topic": Topic::new(TopicType::User, user_id.into()),
+                            "topic": topic,
                             "event": event
                         })
                         .to_string(),
@@ -114,9 +120,35 @@ impl PubSub {
         self.map.write().await.unsubscribe(socket_id, &topic)
     }
 
-    pub async fn notify_of_new_message(&self, channel_id: &str, message: &Message) {
+    pub async fn notify_new_message(&self, channel_id: &str, message: &Message) {
         self.broadcast(
             &Topic::new(TopicType::Channel, channel_id.to_owned()),
+            Event::Message(message),
+        )
+        .await;
+    }
+
+    pub async fn notify_dm_new_message(&self, recipient_id: &str, message: &Message) {
+        // send to the recipient
+        self.send_to_user(
+            recipient_id,
+            &Topic::new(TopicType::DmChannel, message.author.id.clone()),
+            Event::Message(message),
+        )
+        .await;
+
+        if recipient_id == message.author.id {
+            // somehow we are in a dm with ourselves and we are sending a
+            // message to ourselves
+            return;
+        }
+
+        // send the author's own message to the author as well
+        self.send_to_user(
+            &message.author.id,
+            // the dmchannel topic has the recipient's id because
+            // that's the topic that the author follows
+            &Topic::new(TopicType::DmChannel, recipient_id.to_string()),
             Event::Message(message),
         )
         .await;
@@ -139,10 +171,8 @@ impl PubSub {
     }
 
     pub async fn send_typing(&self, channel_id: &str, user: &User) {
-        let topic = Topic::new(TopicType::Channel, channel_id.to_string());
-
         self.broadcast(
-            &topic,
+            &Topic::new(TopicType::Channel, channel_id.to_string()),
             Event::Typing {
                 user: &PublicUserInfo::from(user.clone()),
             },
@@ -150,10 +180,94 @@ impl PubSub {
         .await;
     }
 
-    pub async fn notify_message_deleted(&self, channel_id: &str, message_id: &str) {
-        let topic = Topic::new(TopicType::Channel, channel_id.to_string());
+    pub async fn send_dm_typing(&self, recipient_id: &str, sender: &PublicUserInfo) {
+        self.send_to_user(
+            recipient_id,
+            &Topic::new(TopicType::DmChannel, sender.id.clone()),
+            Event::Typing { user: sender },
+        )
+        .await;
+    }
 
-        self.broadcast(&topic, Event::DeleteMessage { id: message_id })
-            .await;
+    pub async fn notify_message_deleted(&self, channel_id: &str, message_id: &str) {
+        self.broadcast(
+            &Topic::new(TopicType::Channel, channel_id.to_string()),
+            Event::DeleteMessage { id: message_id },
+        )
+        .await;
+    }
+
+    pub async fn notify_dm_message_deleted(
+        &self,
+        recipient_id: &str,
+        deleter_id: &str,
+        message_id: &str,
+    ) {
+        self.send_to_user(
+            recipient_id,
+            &Topic::new(TopicType::DmChannel, deleter_id.to_string()),
+            Event::DeleteMessage { id: (message_id) },
+        )
+        .await;
+
+        if recipient_id == deleter_id {
+            // somehow we are in a dm with ourselves and we are deleting our own message
+            return;
+        }
+
+        // send event back to the deleter as well
+        self.send_to_user(
+            deleter_id,
+            // the dmchannel topic has the recipient's id because
+            // that's the topic that the deleter follows
+            &Topic::new(TopicType::DmChannel, recipient_id.to_string()),
+            Event::DeleteMessage { id: (message_id) },
+        ).await;
+    }
+
+    pub async fn notify_friend_request_sent(&self, recipient_id: &str, sender: &PublicUserInfo) {
+        self.send_to_user(
+            recipient_id,
+            &Topic::new(TopicType::User, sender.id.clone()),
+            Event::FriendRequestUpdate {
+                state: "sent",
+                user: sender,
+            },
+        )
+        .await;
+    }
+
+    pub async fn notify_friend_request_accepted(
+        &self,
+        recipient_id: &str,
+        sender: &PublicUserInfo,
+    ) {
+        self.send_to_user(
+            recipient_id,
+            &Topic::new(TopicType::User, sender.id.clone()),
+            Event::FriendRequestUpdate {
+                state: "accepted",
+                user: sender,
+            },
+        )
+        .await;
+    }
+
+    pub async fn notify_friend_request_remove(&self, recipient_id: &str, sender: &PublicUserInfo) {
+        self.send_to_user(
+            recipient_id,
+            &Topic::new(TopicType::User, sender.id.clone()),
+            Event::FriendRequestRemove { user: sender },
+        )
+        .await;
+    }
+
+    pub async fn notify_friend_remove(&self, recipient_id: &str, sender: &PublicUserInfo) {
+        self.send_to_user(
+            recipient_id,
+            &Topic::new(TopicType::User, sender.id.clone()),
+            Event::FriendRemove { user: sender },
+        )
+        .await;
     }
 }

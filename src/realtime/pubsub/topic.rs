@@ -40,6 +40,9 @@ pub enum TopicType {
     /// Friend requests, etc... with respect to only one user
     /// Probably redundant
     User,
+    /// Messages or typing, etc... in a DM channel
+    /// ID is the other user's ID relative to the current user
+    DmChannel,
 }
 
 impl FromStr for TopicType {
@@ -49,6 +52,8 @@ impl FromStr for TopicType {
         match s {
             "guild" => Ok(Self::Guild),
             "channel" => Ok(Self::Channel),
+            "user" => Ok(Self::User),
+            "dm_channel" => Ok(Self::DmChannel),
             _ => Err(()),
         }
     }

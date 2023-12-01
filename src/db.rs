@@ -1,6 +1,7 @@
 use actix_web::web::Data;
 use chrono::{DateTime, Utc};
 use futures::TryFutureExt;
+use nanoid::nanoid;
 use sqlx::query;
 use sqlx::{Pool, Postgres};
 
@@ -36,6 +37,28 @@ impl Database {
         )
         .fetch_optional(&self.pool)
         .await?;
+
+        Ok(user)
+    }
+
+    pub async fn get_user_by_username(&self, name: &str, ignore_bots: bool) -> Result<Option<User>, sqlx::Error> {
+        let user = sqlx::query_as!(
+            User,
+            r#"
+                SELECT id, name, email, avatar, bot
+                FROM users
+                WHERE name = $1
+            "#,
+            name
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(ref user) = user {
+            if user.bot && ignore_bots {
+                return Ok(None);
+            }
+        }
 
         Ok(user)
     }
@@ -273,5 +296,38 @@ impl Database {
         .execute(&self.pool)
         .await?;
         Ok(())
+    }
+    pub async fn get_dm_channel_id(
+        &self,
+        from_id: &str,
+        to_id: &str,
+    ) -> Result<String, sqlx::Error> {
+        let user1 = std::cmp::min(from_id, to_id);
+        let user2 = std::cmp::max(from_id, to_id);
+
+        let existing_channel = sqlx::query!(
+            "SELECT id FROM dmchannels WHERE from_user = $1 AND to_user = $2",
+            user1,
+            user2
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let channel_id = match existing_channel {
+            // return the existing channel's id
+            Some(channel) => channel.id,
+            // create a new channel
+            None => sqlx::query!(
+                "INSERT INTO dmchannels (id, from_user, to_user) VALUES ($1, $2, $3) RETURNING id",
+                nanoid!(),
+                user1,
+                user2
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .id,
+        };
+
+        Ok(channel_id)
     }
 }
