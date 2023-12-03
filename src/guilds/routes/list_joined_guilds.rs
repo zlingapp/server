@@ -7,11 +7,11 @@ use crate::{auth::access_token::AccessToken, db::DB, error::HResult};
 #[derive(Serialize, ToSchema)]
 pub struct GuildInfo {
     #[schema(example = "rMBrzZ7FQk6ZImWlTiRPo")]
-    id: String,
+    pub id: String,
     #[schema(example = "My Cool Server")]
-    name: String,
+    pub name: String,
     #[schema(example = "/media/s6NIiu2oOh1FEL0Xfjc7n/cat.jpg")]
-    icon: Option<String>,
+    pub icon: Option<String>,
 }
 
 /// List Joined Guilds

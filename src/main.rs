@@ -25,6 +25,7 @@ mod db;
 mod error;
 mod friends;
 mod guilds;
+mod invites;
 mod media;
 mod messaging;
 mod options;
@@ -47,7 +48,6 @@ async fn main() -> std::io::Result<()> {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info,sqlx::query=warn")
     }
-
     // initialize logger
     env_logger::init();
 
@@ -142,6 +142,9 @@ async fn main() -> std::io::Result<()> {
             // friends
             .configure(friends::management::configure_app)
             .configure(friends::messaging::configure_app)
+            // invites
+            .configure(invites::routes::configure_app)
+            // Default 404 response
             .default_service(web::route().to(api_endpoint_not_found))
             // OpenAPI docs
             .service(

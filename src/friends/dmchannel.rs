@@ -26,10 +26,7 @@ impl FromRequest for DMChannel {
     type Error = HandlerError;
     type Future = Pin<Box<dyn Future<Output = HResult<Self>>>>;
 
-    fn from_request(
-        req: &actix_web::HttpRequest,
-        _payload: &mut Payload,
-    ) -> Self::Future {
+    fn from_request(req: &actix_web::HttpRequest, _payload: &mut Payload) -> Self::Future {
         let req = req.clone();
 
         Box::pin(async move {
