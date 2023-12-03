@@ -2,8 +2,9 @@ use crate::{
     auth::user::User,
     db::DB,
     error::{macros::err, HResult},
+    guilds::routes::list_joined_guilds::GuildInfo,
     invites::routes::see_invite::InvitePath,
-    realtime::pubsub::pubsub::PubSub, guilds::routes::list_joined_guilds::GuildInfo,
+    realtime::pubsub::pubsub::PubSub,
 };
 use actix_web::{
     post,
@@ -41,9 +42,17 @@ pub async fn use_invite(
         path.invite_id
     )
     .fetch_optional(&db.pool)
-    .await?.ok_or(crate::error::HandlerError::from((400, "Invalid invite code".into())))?; // This kinda sucks...
+    .await?
+    .ok_or(crate::error::HandlerError::from((
+        400,
+        "Invalid invite code".into(),
+    )))?; // This kinda sucks...
 
-    let guild = GuildInfo { id: resp.id, name: resp.name, icon: resp.icon};
+    let guild = GuildInfo {
+        id: resp.id,
+        name: resp.name,
+        icon: resp.icon,
+    };
 
     if resp
         .expires_at
