@@ -2,6 +2,7 @@ use actix_web::{get, web::Json};
 use serde::Serialize;
 use utoipa::ToSchema;
 
+use crate::auth::user::PublicUserInfo;
 use crate::{
     auth::access_token::AccessToken, channels::channel::ChannelType, db::DB,
     guilds::routes::GuildPath,

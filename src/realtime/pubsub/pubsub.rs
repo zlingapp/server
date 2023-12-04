@@ -48,6 +48,17 @@ pub enum Event<'l> {
     FriendRequestRemove { user: &'l PublicUserInfo },
     /// Someone severed all ties with you
     FriendRemove { user: &'l PublicUserInfo },
+
+    /// Someone joined a voice channel
+    VoiceJoin {
+        user: &'l PublicUserInfo,
+        channel: &'l str,
+    },
+    /// Someone disconnected from a voice channel
+    VoiceLeave {
+        user: &'l PublicUserInfo,
+        channel: &'l str,
+    },
 }
 
 impl PubSub {
@@ -222,7 +233,8 @@ impl PubSub {
             // that's the topic that the deleter follows
             &Topic::new(TopicType::DmChannel, recipient_id.to_string()),
             Event::DeleteMessage { id: (message_id) },
-        ).await;
+        )
+        .await;
     }
 
     pub async fn notify_friend_request_sent(&self, recipient_id: &str, sender: &PublicUserInfo) {
@@ -267,6 +279,27 @@ impl PubSub {
             recipient_id,
             &Topic::new(TopicType::User, sender.id.clone()),
             Event::FriendRemove { user: sender },
+        )
+        .await;
+    }
+
+    pub async fn notify_voice_join(&self, guild_id: &str, user: &PublicUserInfo, channel_id: &str) {
+        self.broadcast(
+            &Topic::new(TopicType::Guild, guild_id.into()),
+            Event::VoiceJoin {
+                user,
+                channel: channel_id,
+            },
+        )
+        .await;
+    }
+    pub async fn notify_voice_leave(&self, guild_id: &str, user: &PublicUserInfo, channel_id: &str) {
+        self.broadcast(
+            &Topic::new(TopicType::Guild, guild_id.into()),
+            Event::VoiceLeave {
+                user,
+                channel: channel_id,
+            },
         )
         .await;
     }

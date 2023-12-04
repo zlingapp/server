@@ -16,7 +16,7 @@ use crate::{
     voice::{
         channel::create_channel, client::VoiceClient, pool::VoiceWorkerPool, VoiceChannels,
         VoiceClients,
-    },
+    }, realtime::pubsub::pubsub::PubSub, db::DB,
 };
 
 #[derive(Deserialize, IntoParams)]
@@ -124,6 +124,8 @@ pub async fn join_vc(
     clients: Data<VoiceClients>,
     channels: Data<VoiceChannels>,
     vwp: Data<Mutex<VoiceWorkerPool>>,
+    pubsub: Data<PubSub>,
+    db: DB,
     query: Query<JoinVcQuery>,
 ) -> Json<JoinVcReply> {
     // get the channel
@@ -138,7 +140,7 @@ pub async fn join_vc(
     };
 
     // create a new client
-    let client = VoiceClient::with_channel_and_user(channel.clone(), user);
+    let client = VoiceClient::with_channel_and_user(channel.clone(), user.clone());
     let client = Arc::new(client);
 
     // add the client to the channel's client list
@@ -198,5 +200,6 @@ pub async fn join_vc(
         .unwrap()
         .insert(client.identity.clone(), client);
 
+    pubsub.notify_voice_join(&db.chan_to_guild(&channel.id).await.unwrap(), &user.into(), &channel.id).await;
     Json(reply)
 }

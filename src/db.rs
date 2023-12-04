@@ -41,7 +41,11 @@ impl Database {
         Ok(user)
     }
 
-    pub async fn get_user_by_username(&self, name: &str, ignore_bots: bool) -> Result<Option<User>, sqlx::Error> {
+    pub async fn get_user_by_username(
+        &self,
+        name: &str,
+        ignore_bots: bool,
+    ) -> Result<Option<User>, sqlx::Error> {
         let user = sqlx::query_as!(
             User,
             r#"
@@ -61,6 +65,18 @@ impl Database {
         }
 
         Ok(user)
+    }
+    pub async fn chan_to_guild(&self, channel: &str) -> Result<String, sqlx::Error> {
+        let id = query!(
+            r#"SELECT guilds.id
+                FROM guilds, channels
+                WHERE channels.id = $1
+                AND guilds.id = channels.guild_id"#,
+            channel
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(id.id)
     }
 
     pub async fn register_user(&self, user: &User, password: &str) -> Result<bool, sqlx::Error> {
@@ -317,15 +333,17 @@ impl Database {
             // return the existing channel's id
             Some(channel) => channel.id,
             // create a new channel
-            None => sqlx::query!(
+            None => {
+                sqlx::query!(
                 "INSERT INTO dmchannels (id, from_user, to_user) VALUES ($1, $2, $3) RETURNING id",
                 nanoid!(),
                 user1,
                 user2
             )
-            .fetch_one(&self.pool)
-            .await?
-            .id,
+                .fetch_one(&self.pool)
+                .await?
+                .id
+            }
         };
 
         Ok(channel_id)
