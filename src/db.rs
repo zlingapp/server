@@ -148,18 +148,19 @@ impl Database {
     pub async fn can_user_delete_invite(
         &self,
         user_id: &str,
-        invite_id: &str,
+        code: &str,
     ) -> Result<bool, sqlx::Error> {
-        let owner = sqlx::query!(
-            r#"SELECT guilds.owner 
-                FROM guilds,invites 
+        let guild = sqlx::query!(
+            r#"SELECT guilds.id 
+                FROM guilds, invites 
                 WHERE invites.code = $1 
-                AND guilds.id=invites.guild_id"#,
-            invite_id
+                AND guilds.id = invites.guild_id"#,
+            code
         )
         .fetch_one(&self.pool)
         .await?;
-        Ok(owner.owner == user_id)
+
+        self.is_user_in_guild(user_id, &guild.id).await
     }
 
     pub async fn get_message(
@@ -321,8 +322,7 @@ impl Database {
             // return the existing channel's id
             Some(channel) => channel.id,
             // create a new channel
-            None => {
-                sqlx::query!(
+            None => sqlx::query!(
                 "INSERT INTO dmchannels (id, from_user, to_user) VALUES ($1, $2, $3) RETURNING id",
                 nanoid!(),
                 user1,
@@ -330,8 +330,7 @@ impl Database {
             )
                 .fetch_one(&self.pool)
                 .await?
-                .id
-            }
+                .id,
         };
 
         Ok(channel_id)

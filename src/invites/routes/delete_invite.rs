@@ -1,4 +1,4 @@
-use crate::invites::routes::see_invite::InvitePath;
+use crate::invites::routes::peek_invite::InviteParams;
 use crate::{
     auth::user::User,
     db::DB,
@@ -10,34 +10,36 @@ use actix_web::{
 };
 use sqlx::query;
 
-/// Delete an invite
+/// Delete Invite
 ///
-/// Deletes a guild invite. Currently requires user to be owner of the invite guild.
+/// Deletes a guild invite.
 #[utoipa::path(
-    params(InvitePath),
+    params(InviteParams),
     responses(
         (status = OK, description = "Invite successfully deleted"),
-        (status = FORBIDDEN, description = "No permission to delete an invite for that guild"),
-        (status = FORBIDDEN, description = "No such invite exists")
+        (status = FORBIDDEN, description = "No permission to delete invite"),
     ),
     tag = "invites",
     security(("token" = []))
 )]
-#[delete("/invites/{invite_id}")]
-pub async fn delete_invite(db: DB, path: Path<InvitePath>, user: User) -> HResult<Json<String>> {
+#[delete("/invites/{code}")]
+pub async fn delete_invite(db: DB, path: Path<InviteParams>, user: User) -> HResult<Json<String>> {
     if db
-        .can_user_delete_invite(&user.id, &path.invite_id)
+        .can_user_delete_invite(&user.id, &path.code)
         .await
         .unwrap_or(false)
     {
         err!(403)?;
     }
-    let rows_affected = query!("DELETE FROM invites WHERE code = $1", path.invite_id)
+    
+    let rows_affected = query!("DELETE FROM invites WHERE code = $1", path.code)
         .execute(&db.pool)
         .await?
         .rows_affected();
+
     if rows_affected == 0 {
         err!()?;
     }
+
     Ok(Json("Invite successfully deleted".into()))
 }

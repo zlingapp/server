@@ -1,17 +1,19 @@
 pub mod create_invite;
 pub mod delete_invite;
-pub mod see_invite;
+pub mod peek_invite;
 pub mod use_invite;
+pub mod list_invites;
 
-use crate::guilds::routes::list_joined_guilds::GuildInfo;
+use list_invites::InviteInfo;
 use create_invite::{CreateInviteRequest, CreateInviteResponse};
 use utoipa::OpenApi;
 
 pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(create_invite::create_invite);
-    cfg.service(see_invite::see_invite);
+    cfg.service(peek_invite::peek_invite);
     cfg.service(use_invite::use_invite);
     cfg.service(delete_invite::delete_invite);
+    cfg.service(list_invites::list_invites);
 }
 
 #[derive(OpenApi)]
@@ -21,14 +23,15 @@ pub fn configure_app(cfg: &mut actix_web::web::ServiceConfig) {
     ),
     paths(
         create_invite::create_invite,
-        see_invite::see_invite,
+        peek_invite::peek_invite,
         use_invite::use_invite,
-        delete_invite::delete_invite
+        delete_invite::delete_invite,
+        list_invites::list_invites,
     ),
     components(schemas(
         CreateInviteRequest,
         CreateInviteResponse,
-        GuildInfo
+        InviteInfo
     ))
 )]
 pub struct InvitesApiDoc;
