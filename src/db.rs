@@ -158,6 +158,33 @@ impl Database {
         self.can_user_see_channel(user_id, channel_id).await
     }
 
+    // TODO: Add permissions
+    pub async fn can_user_create_invite_in(
+        &self,
+        user_id: &str,
+        guild_id: &str,
+    ) -> Result<bool, sqlx::Error> {
+        self.is_user_in_guild(user_id, guild_id).await
+    }
+
+    pub async fn can_user_delete_invite(
+        &self,
+        user_id: &str,
+        code: &str,
+    ) -> Result<bool, sqlx::Error> {
+        let guild = sqlx::query!(
+            r#"SELECT guilds.id 
+                FROM guilds, invites 
+                WHERE invites.code = $1 
+                AND guilds.id = invites.guild_id"#,
+            code
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        self.is_user_in_guild(user_id, &guild.id).await
+    }
+
     pub async fn get_message(
         &self,
         channel_id: &str,
@@ -323,9 +350,9 @@ impl Database {
                 user1,
                 user2
             )
-            .fetch_one(&self.pool)
-            .await?
-            .id,
+                .fetch_one(&self.pool)
+                .await?
+                .id,
         };
 
         Ok(channel_id)
