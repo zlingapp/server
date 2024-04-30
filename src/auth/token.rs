@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use derive_more::{Display, Error};
 use serde_json::json;
 use std::{fmt::Display, str::FromStr};
@@ -92,10 +92,7 @@ impl FromStr for Token {
             .map_err(|_| TokenParseError::InvalidFormat)?;
         let expires = u32::from_be_bytes(expires);
 
-        let expires = NaiveDateTime::from_timestamp_opt(expires as i64, 0)
-            .ok_or(TokenParseError::InvalidFormat)?
-            .and_local_timezone(Utc)
-            .single()
+        let expires = DateTime::from_timestamp(expires as i64, 0)
             .ok_or(TokenParseError::InvalidFormat)?;
 
         let tok = Self::new(user_id, expires, proof.to_string());

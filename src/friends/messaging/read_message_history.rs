@@ -1,5 +1,5 @@
 use actix_web::{get, web::Query, HttpResponse};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use utoipa::IntoParams;
 
@@ -80,9 +80,7 @@ async fn read_message_history(
         channel.id,
         limit,
         req.before.unwrap_or(Utc::now()).naive_utc(),
-        req.after
-            .map(|d| d.naive_utc())
-            .unwrap_or(NaiveDateTime::from_timestamp_opt(0, 0).unwrap())
+        req.after.unwrap_or_default().naive_utc(), // unix epoch
     )
     .fetch_all(&db.pool)
     .await?;

@@ -1,9 +1,9 @@
 use crate::db::Database;
 
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use lazy_static::lazy_static;
 use nanoid::nanoid;
-use sqlx::{query, types::chrono::NaiveDateTime};
+use sqlx::query;
 
 use crate::{
     auth::{access_token::AccessToken, token::Token, user::User},
@@ -57,7 +57,9 @@ impl Database {
             user_id,
             nanoid!(),
             nanoid!(48),
-            NaiveDateTime::from_timestamp_opt(expires.timestamp(), 0),
+            DateTime::from_timestamp(expires.timestamp(), 0)
+                .unwrap()
+                .naive_utc(),
             user_agent
         )
         .fetch_one(&self.pool)
