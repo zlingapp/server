@@ -38,7 +38,7 @@ pub struct LoginResponse {
 #[utoipa::path(
     responses(
         (status = FORBIDDEN, description = "Invalid username or password", example = "access_denied"),
-        (status = OK, description = "Login successful", body = LoginResponese)
+        (status = OK, description = "Login successful", body = LoginResponse)
     ),
     tag = "identity"
 )]
